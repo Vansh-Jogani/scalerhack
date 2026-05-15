@@ -18,6 +18,10 @@ function Map({ drones, markers }) {
       center: [-118.2437, 34.0522],
       zoom: 13,
     })
+    return () => {
+      map.current?.remove()
+      map.current = null
+    }
   }, [])
 
   // Animate drones with lerp

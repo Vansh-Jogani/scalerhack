@@ -24,6 +24,10 @@ class DroneInterface(ABC):
         ...
 
     @abstractmethod
+    def return_to_launch(self) -> None:
+        ...
+
+    @abstractmethod
     def get_telemetry(self) -> Telemetry:
         ...
 
