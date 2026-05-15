@@ -1,39 +1,34 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Map from './Map'
-import AgentStream from './AgentStream'
+import AdminPanel from './AdminPanel'
+import AgentFeed from './AgentFeed'
 import AdvisoryPanel from './AdvisoryPanel'
-import DroneStatus from './DroneStatus'
+import MapStateManager from './MapStateManager.js'
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function deriveSystemStatus(incidents) {
+  const vals = Object.values(incidents)
+  if (vals.length === 0) return 'NOMINAL'
+  if (vals.some((v) => v.severity === 'CRITICAL')) return 'EMERGENCY'
+  return 'ACTIVE'
+}
+
+// ─── App ──────────────────────────────────────────────────────────────────────
 
 function App() {
-  const [droneData, setDroneData] = useState({})
-  const [markers, setMarkers] = useState([])
-  const [agentStream, setAgentStream] = useState([])
+  const [incidents, setIncidents] = useState({})
+  const [isSelectingLocation, setIsSelectingLocation] = useState(false)
+  const [capturedCoords, setCapturedCoords] = useState(null)
   const [advisory, setAdvisory] = useState(null)
-  const ws = useRef(null)
+  const wsRef = useRef(null)
+  const retryRef = useRef(null)
 
   const activeIncidentType = Object.values(incidents)[0]?.type || null
   const systemStatus = deriveSystemStatus(incidents)
 
-  useReconnectingWS('/ws/map', useCallback((msg) => {
-    if (msg.type === 'map_update') {
-      MapStateManager.receive(msg)
-      if (msg.action === 'add_marker' && msg.incident_id && msg.payload) {
-        setIncidents((prev) => ({
-          ...prev,
-          [msg.incident_id]: {
-            type: msg.payload.type,
-            severity: msg.payload.severity,
-            status: msg.payload.status || 'ACTIVE',
-          },
-        }))
-      } else if (msg.action === 'remove_marker' && msg.incident_id) {
-        setIncidents((prev) => {
-          const next = { ...prev }
-          delete next[msg.incident_id]
-          return next
-        })
-      }
-    }
+  // ── WebSocket connection to backend (/ws) ──
+  const handleMessage = useCallback((msg) => {
     if (msg.type === 'telemetry') {
       MapStateManager.receive({
         type: 'map_update',
@@ -50,10 +45,60 @@ function App() {
           incident_id: m.id,
           payload: { lat: m.lat, lon: m.lon, type: m.type, severity: m.severity || 'MEDIUM', status: 'ACTIVE' },
         })
+        setIncidents((prev) => ({
+          ...prev,
+          [m.id]: {
+            type: m.type,
+            severity: m.severity || 'MEDIUM',
+            status: 'ACTIVE',
+          },
+        }))
       })
     }
-  }, []))
+    if (msg.type === 'advisory') {
+      setAdvisory({ text: msg.data?.text || '', timestamp: new Date().toISOString() })
+    }
+    if (msg.type === 'agent_stream') {
+      // Dispatch as custom event for AgentFeed
+      window.dispatchEvent(new CustomEvent('aria-agent-event', {
+        detail: {
+          agent: msg.data?.agent_id?.toUpperCase()?.replace('-', '_') || 'ORCHESTRATOR',
+          text: msg.data?.content || msg.data?.event || '',
+        },
+      }))
+    }
+  }, [])
 
+  useEffect(() => {
+    function connect() {
+      const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
+      const ws = new WebSocket(`${protocol}://${window.location.host}/ws`)
+      wsRef.current = ws
+
+      ws.onmessage = (evt) => {
+        try {
+          handleMessage(JSON.parse(evt.data))
+        } catch (e) {
+          console.warn('[App] WS parse error', e)
+        }
+      }
+
+      ws.onclose = () => {
+        wsRef.current = null
+        retryRef.current = setTimeout(connect, 2000)
+      }
+
+      ws.onerror = () => ws.close()
+    }
+
+    connect()
+    return () => {
+      clearTimeout(retryRef.current)
+      wsRef.current?.close()
+    }
+  }, [handleMessage])
+
+  // ── Callbacks ──
   function handleAdvisoryUpdate(text, timestamp) {
     setAdvisory({ text, timestamp })
   }

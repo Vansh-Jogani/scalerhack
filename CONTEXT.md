@@ -16,15 +16,13 @@ Multi-agent autonomous drone swarm simulation for disaster response — three Cl
 
 ## Current stage
 
-**Stage:** Stage 1 — Foundation (COMPLETE — all 6 checkpoints verified 2026-05-15)
-**Last verified working:** All 6 checkpoints confirmed live:
-  - CP1: FastAPI /health 200 on port 8000
-  - CP2: WebSocket telemetry at 10Hz
-  - CP3: fire.json marker-001 in WS broadcast
-  - CP4: Vite frontend on 5173, dark Mapbox map, drone icon + fire marker
-  - CP5: GO signal starts SurveillanceAgent loop, drone → FLYING
-  - CP6: fly_to executes against DroneModel, position confirmed updating in telemetry
-**Next concrete task:** Stage 2 — Agent 1 Complete (begin only after explicit user approval)
+**Stage:** Stage 5 — Demo Polish
+**Last verified working:** Stages 1-4 all checkpoints verified 2026-05-16:
+  - Stage 1 (6 CPs): FastAPI, WebSocket, markers, frontend, GO signal, fly_to
+  - Stage 2 (8 CPs): BaseAgent OODA-R, all tools, Agent 1 instantiation, tracer
+  - Stage 3 (7 CPs): LangGraph orchestrator, classifier, IncidentManager, Agent 2
+  - Stage 4 (10 CPs): Agent 3 Claude API, section validation, world events, heartbeat
+**Next concrete task:** Stage 5 — Demo Polish (second scenario, multi-incident, demo script)
 
 Update this block after every session.
 
@@ -65,6 +63,9 @@ Format: `YYYY-MM-DD — decision — rationale`
 - 2026-05-15 — GO signal flow: operator sends full context (area+polygon+disaster_type), orchestrator strips to coordinates-only for Agent 1 — per CHANGE 1 spec
 - 2026-05-15 — Sensor overlay uses ray-casting point-in-polygon (not distance-to-center) — per CHANGE 3 spec
 - 2026-05-15 — Agent 1 survey pattern: expanding circles at 50m, 100m, 150m with 8 orbit points each — per CHANGE 2 spec
+- 2026-05-16 — Agent 3 uses Claude API instead of Ollama — user decision, eliminates local model dependency
+- 2026-05-16 — All agents use claude-sonnet-4-20250514 — user confirmed model choice
+- 2026-05-16 — Agent 1 survey is LLM-driven (not hardcoded) — LLM decides tool call sequence via OODA-R loop
 
 ---
 

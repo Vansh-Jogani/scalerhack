@@ -4,6 +4,40 @@
 > Add an entry after: stage completion, blocker hit, architectural decision, end of session.
 > Format below. Keep entries tight — full prose belongs in `CONTEXT.md`.
 
+## [2026-05-16 01:48] — Stages 2-4 complete — full backend agent layer implemented
+**Stage:** Stage 4 (COMPLETE — all checkpoints verified)
+**State:** working
+**What got done:**
+- **Stage 2:** BaseAgent OODA-R loop with multi-turn tool use + Omium tracer. Agent 1 SurveillanceAgent inherits BaseAgent, uses verbatim SPEC.md prompt. 5 tools: fly_to, loiter_over, get_sensor_reading, report_classification, request_detailed_pass. rtl + abort also implemented.
+- **Stage 3:** LangGraph StateGraph orchestrator (deterministic, no LLM). SqliteSaver-ready. 6 nodes: standby → surveillance → classify → swarm → advisory → END. Classifier is pure SWARM_CAPABILITIES lookup (no NLP). IncidentManager: create-or-queue only (V1). Agent 2 SpecialistAgent inherits BaseAgent, receives swarm_config from classifier, does NOT choose it. 6 tools: fly_to, loiter_over, get_sensor_reading, zone_annotate, survivor_marker, report_findings.
+- **Stage 4:** Agent 3 AdvisoryAgent — event-driven (not a loop), Claude API (user overrode SPEC.md Ollama), verbatim 6-section SPEC.md prompt, validation+retry, 15s debounce on agent_2_findings_updated, error advisory fallback. WorldState.schedule_event() for fire growth. main.py: /api/incident/create REST endpoint, 60s heartbeat loop for Agent 3, 90s fire growth world event.
+- **Architecture enforcement verified:** No LLM in orchestrator/classifier, no cross-agent state writes, no Ollama references, no recommended_swarm in report_classification, all sub-key ownership correct.
+**What's next:**
+- Stage 5 — Demo Polish
+**Blockers / open questions:**
+- none
+**Files touched:**
+- config.yaml (model → claude-sonnet-4-20250514 for all 3 agents)
+- agents/base_agent.py (full rewrite — OODA-R + multi-turn + tracer)
+- agents/agent1_surveillance.py (rewrite — inherits BaseAgent, verbatim SPEC.md prompt)
+- agents/agent2_specialist.py (rewrite — inherits BaseAgent, receives swarm_config)
+- agents/agent3_advisory.py (rewrite — Claude API, event-driven, 6-section output)
+- agents/tools/flight_tools.py (added loiter_over, rtl, abort)
+- agents/tools/report_tools.py (rewrote: removed recommended_swarm, added request_detailed_pass, zone_annotate, survivor_marker)
+- orchestrator/orchestrator.py (full LangGraph rewrite)
+- orchestrator/classifier.py (rewrite — pure lookup, no NLP)
+- orchestrator/incident_manager.py (simplified — removed reassign_resources)
+- sim/world_state.py (added schedule_event)
+- sim_layer/tracer.py (fixed structlog kwarg collision)
+- main.py (rewrote — /api/incident/create, heartbeat, world events, no Ollama)
+- requirements.txt (added langgraph, aiosqlite)
+**Notes for next session:**
+- User decision: Agent 3 uses Claude API, not Ollama — record in CONTEXT.md
+- All 3 agents use claude-sonnet-4-20250514
+- LangGraph installed as langgraph 1.2.0
+- 25 checkpoint tests passed across all 3 stages
+
+
 2026-05-16 — two-agent dispatch animation complete — fixed-wing surveillance orbit + assessment panel + rotary swarm burst sequence — DispatchAnimation.js created, Map.jsx + AgentFeed.jsx updated, clean build
 
 2026-05-16 — response centres layer added — 17 centres loaded from src/data/response_centres.json, colour-coded by type (FIRE_STATION/#4FC3F7, HOSPITAL/#E53935, POLICE/#5E35B1, NDRF/#1565C0, SDRF/#1E88E5, CIVIL_DEFENCE/#00897B, AIRPORT_EMERGENCY/#F4511E, MUNICIPAL_EMERGENCY/#039BE5), ring+dot+label layers, click popup, labels appear at zoom 13+, unverified entries at reduced opacity. `responseCentres` re-exported from Map.jsx for agent nearest-centre computation.

@@ -31,7 +31,7 @@ class Tracer:
         return Span(name, attrs)
 
     def record_event(self, name: str, **attrs) -> None:
-        logger.info("trace_event", service=self.service_name, event=name, **attrs)
+        logger.info("trace_event", service=self.service_name, event_name=name, **attrs)
 
 
 tracer = Tracer("aria-v1")

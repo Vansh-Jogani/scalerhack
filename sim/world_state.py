@@ -123,3 +123,48 @@ class WorldState:
     def stop_tick_loop(self) -> None:
         """Signal the tick loop to stop."""
         self._running = False
+
+    # ------------------------------------------------------------------
+    # World event simulation (Stage 4)
+    # ------------------------------------------------------------------
+
+    async def schedule_event(
+        self,
+        event_type: str,
+        delay_seconds: float,
+        marker_id: str,
+        orchestrator=None,
+    ) -> None:
+        """Schedule a world event to fire after a delay.
+
+        For fire scenario: after delay, fire grows by 20% radius, wind shifts 15°.
+        This fires the 'world_event_fired' trigger to Agent 3 via orchestrator.
+        """
+        await asyncio.sleep(delay_seconds)
+
+        marker = next((m for m in self.markers if m.id == marker_id), None)
+        if marker is None:
+            return
+
+        event = {"type": event_type, "marker_id": marker_id}
+
+        if event_type == "fire_growth":
+            old_radius = marker.radius_m
+            marker.radius_m *= 1.2  # 20% growth
+            event["old_radius_m"] = old_radius
+            event["new_radius_m"] = marker.radius_m
+            event["wind_shift_deg"] = 15.0
+            event["description"] = (
+                f"Fire area grew from {old_radius:.0f}m to {marker.radius_m:.0f}m radius. "
+                f"Wind shifted 15° clockwise."
+            )
+        elif event_type == "aftershock":
+            event["description"] = "Aftershock detected — structural reassessment required."
+        elif event_type == "flood_surge":
+            marker.radius_m *= 1.3
+            event["description"] = "Flood surge — water level rising."
+        else:
+            event["description"] = f"World event: {event_type}"
+
+        if orchestrator:
+            await orchestrator.trigger_world_event(event)

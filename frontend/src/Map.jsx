@@ -120,21 +120,9 @@ function Map({ isSelectingLocation, onLocationSelect, incidents, systemStatus })
 
   // Sync cursor; clear draw state whenever draw mode starts fresh
   useEffect(() => {
-    if (map.current) return
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11',
-      center: [-118.2437, 34.0522],
-      zoom: 13,
-    })
-    map.current.on('load', () => {
-      console.log('[ARIA] Map loaded ✓')
-      setMapReady(true)
-    })
-    map.current.on('error', (e) => console.error('[ARIA] Map error:', e))
-    return () => {
-      map.current?.remove()
-      map.current = null
+    selectingRef.current = isSelectingLocation
+    if (mapRef.current) {
+      mapRef.current.getCanvas().style.cursor = isSelectingLocation ? 'crosshair' : ''
     }
     if (isSelectingLocation) {
       if (_centerMarker) { _centerMarker.remove(); _centerMarker = null }
@@ -145,7 +133,8 @@ function Map({ isSelectingLocation, onLocationSelect, incidents, systemStatus })
     }
   }, [isSelectingLocation])
 
-  // Add/update drone icons — only once map style is ready
+  // Main map initialisation — runs once
+  useEffect(() => {
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: 'mapbox://styles/mapbox/dark-v11',
@@ -307,7 +296,7 @@ function Map({ isSelectingLocation, onLocationSelect, incidents, systemStatus })
         const el = document.createElement('div')
         el.style.cssText = [
           'width:10px', 'height:10px', 'border-radius:50%',
-          'background:white', \`border:2px solid \${_drawColor}\`,
+          'background:white', `border:2px solid ${_drawColor}`,
           'box-sizing:border-box', 'pointer-events:none',
         ].join(';')
         _centerMarker = new mapboxgl.Marker({ element: el, anchor: 'center' })

@@ -10,7 +10,6 @@ simulation:
   scenario: "sim/scenarios/fire.json"
 
 models:
-  agent1: "claude-haiku-4-5-20251001"
-  agent2: "claude-haiku-4-5-20251001"
-  agent3_endpoint: "http://localhost:11434/api/chat"
-  agent3_model: "llama3.1:8b"
+  agent1: "claude-sonnet-4-20250514"
+  agent2: "claude-sonnet-4-20250514"
+  agent3: "claude-sonnet-4-20250514"
