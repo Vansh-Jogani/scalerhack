@@ -4,6 +4,51 @@
 > Add an entry after: stage completion, blocker hit, architectural decision, end of session.
 > Format below. Keep entries tight — full prose belongs in `CONTEXT.md`.
 
+2026-05-16 — two-agent dispatch animation complete — fixed-wing surveillance orbit + assessment panel + rotary swarm burst sequence — DispatchAnimation.js created, Map.jsx + AgentFeed.jsx updated, clean build
+
+2026-05-16 — response centres layer added — 17 centres loaded from src/data/response_centres.json, colour-coded by type (FIRE_STATION/#4FC3F7, HOSPITAL/#E53935, POLICE/#5E35B1, NDRF/#1565C0, SDRF/#1E88E5, CIVIL_DEFENCE/#00897B, AIRPORT_EMERGENCY/#F4511E, MUNICIPAL_EMERGENCY/#039BE5), ring+dot+label layers, click popup, labels appear at zoom 13+, unverified entries at reduced opacity. `responseCentres` re-exported from Map.jsx for agent nearest-centre computation.
+
+---
+
+## [2026-05-15 19:00] — Frontend complete — operator dashboard + admin trigger panel built
+**Stage:** Stage 1 (frontend layer added on top of complete Stage 1 backend)
+**State:** working
+**What got done:**
+- Built complete ARIA v1 tactical operator frontend — dark military aesthetic
+- 9 new files written in frontend/src/, all verified with `npm run build` (0 errors)
+- Two-panel layout: 60% map / 40% three-panel dashboard
+- MapStateManager.js: singleton batch-writer to Mapbox (1s flush), disaster pins, risk zone rings, evac routes, survivor pins
+- DroneManager.js: RAF lerp over 500ms, bearing heading, 20-pos dashed trail, state badge, popup on click
+- Map.jsx: full Mapbox dark map, floating overlays (ARIA wordmark, status badge, coord readout, incident counters), crosshair location-select mode
+- AdminPanel.jsx: incident command UI — location capture, 5 disaster type pills, 4 severity buttons, deploy button (POST /api/incident/create)
+- AgentFeed.jsx: ws/agents consumer, colour-coded by agent, max 200 entries, exponential backoff reconnect, blinking empty state
+- AdvisoryPanel.jsx: Agent 3 structured output parser, framer-motion 80ms staggered section animations
+- App.jsx: dual WebSocket (ws/map + ws/agents), backward-compatible with legacy Stage 1 /ws telemetry, system status derivation
+- constants.js: single source of truth for all disaster colors, severity radii, drone states
+- index.css: Google Fonts (Rajdhani/JetBrains Mono/DM Sans), full CSS variable system, keyframes, component classes
+- framer-motion + @types/mapbox-gl added to package.json, installed
+**What's next:**
+- User approval to proceed to Stage 2 (Agent 1 complete)
+- Frontend will be fully exercised once Stage 2 backend events start flowing through ws/map + ws/agents
+**Blockers / open questions:**
+- none
+**Files touched:**
+- frontend/package.json
+- frontend/src/constants.js (new)
+- frontend/src/index.css (new)
+- frontend/src/MapStateManager.js (new)
+- frontend/src/DroneManager.js (new)
+- frontend/src/Map.jsx (overwrite)
+- frontend/src/AdminPanel.jsx (new)
+- frontend/src/AgentFeed.jsx (new)
+- frontend/src/AdvisoryPanel.jsx (new)
+- frontend/src/App.jsx (overwrite)
+**Notes for next session:**
+- Frontend proxies /ws/* to backend via Vite — existing proxy config covers ws/map and ws/agents
+- MapStateManager is also backward-compatible with legacy telemetry/markers WS events from Stage 1 backend
+- Backend needs /api/incident/create endpoint for AdminPanel deploy button (Stage 2 task)
+- Bundle size warning (~2MB) is expected — mapbox-gl is large. Not a problem for demo.
+
 ---
 
 ## [2026-05-15 22:40] — Stage 1 test suite created, 61/61 passing
@@ -62,6 +107,28 @@
 ```
 
 ---
+
+## [2026-05-15 17:30] — Stage 1 all 6 checkpoints verified working
+**Stage:** Stage 1 (COMPLETE — awaiting approval to proceed to Stage 2)
+**State:** working
+**What got done:**
+- Wired SurveillanceAgent into main.py GO signal handler (active_agent1 global)
+- CP1: FastAPI health endpoint returns 200 on port 8000 ✓
+- CP2: WebSocket at /ws delivers telemetry at 10Hz ✓
+- CP3: fire.json marker-001 present in every WS broadcast ✓
+- CP4: Vite frontend running on 5173, Mapbox token confirmed, dark map + drone icon + fire marker ✓
+- CP5: GO signal triggers SurveillanceAgent survey loop, drone transitions IDLE→FLYING ✓
+- CP6: fly_to executes against DroneModel, position updates confirmed in telemetry stream ✓
+**What's next:**
+- Wait for explicit "proceed" from user before Stage 2
+**Blockers / open questions:**
+- none
+**Files touched:**
+- main.py (SurveillanceAgent import + GO handler wiring, ~8 lines)
+**Notes for next session:**
+- setup.sh creates venv/; always activate with `source venv/bin/activate` before running backend
+- python3 command (not python) on this machine
+- Frontend WS proxy is correctly configured in vite.config.js
 
 ## [2026-05-15 16:00] — Stage 1 scaffold + agent architecture implemented
 **Stage:** Stage 1 (in progress)

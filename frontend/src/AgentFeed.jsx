@@ -80,6 +80,20 @@ function AgentFeed({ onAdvisoryUpdate, activeIncidentType }) {
     }
   }, [connect])
 
+  useEffect(() => {
+    const handler = (e) => {
+      addEntry({
+        id: `local-${Date.now()}-${Math.random()}`,
+        agent: e.detail.agent,
+        timestamp: new Date().toTimeString().slice(0, 8),
+        text: e.detail.text,
+        incident_id: null,
+      })
+    }
+    window.addEventListener('aria-agent-event', handler)
+    return () => window.removeEventListener('aria-agent-event', handler)
+  }, [addEntry])
+
   // Auto-scroll to newest (entries are prepended, so scroll to top)
   useEffect(() => {
     if (bottomRef.current) {

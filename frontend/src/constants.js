@@ -65,3 +65,40 @@ export const DISASTER_LABELS = {
 
 export const SEVERITY_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
 export const DISASTER_TYPES = ['FIRE', 'STRUCTURAL_COLLAPSE', 'FLOOD', 'INDUSTRIAL_HAZARD', 'MARITIME_SAR']
+
+export const MAX_ZONE_RADIUS_M = 1000
+
+// Global disaster response centres — drone origin points
+// Agent picks nearest centre to the triggered incident
+export const RESPONSE_CENTRES = [
+  { id: 'drc-hyderabad',      name: 'Hyderabad DRC',      country: 'India',        lat: 17.3850,   lon:  78.4867  },
+  { id: 'drc-mumbai',         name: 'Mumbai DRC',          country: 'India',        lat: 19.0760,   lon:  72.8777  },
+  { id: 'drc-delhi',          name: 'Delhi DRC',           country: 'India',        lat: 28.6139,   lon:  77.2090  },
+  { id: 'drc-chennai',        name: 'Chennai DRC',         country: 'India',        lat: 13.0827,   lon:  80.2707  },
+  { id: 'drc-london',         name: 'London DRC',          country: 'UK',           lat: 51.5074,   lon:  -0.1278  },
+  { id: 'drc-paris',          name: 'Paris DRC',           country: 'France',       lat: 48.8566,   lon:   2.3522  },
+  { id: 'drc-berlin',         name: 'Berlin DRC',          country: 'Germany',      lat: 52.5200,   lon:  13.4050  },
+  { id: 'drc-istanbul',       name: 'Istanbul DRC',        country: 'Turkey',       lat: 41.0082,   lon:  28.9784  },
+  { id: 'drc-moscow',         name: 'Moscow DRC',          country: 'Russia',       lat: 55.7558,   lon:  37.6173  },
+  { id: 'drc-dubai',          name: 'Dubai DRC',           country: 'UAE',          lat: 25.2048,   lon:  55.2708  },
+  { id: 'drc-karachi',        name: 'Karachi DRC',         country: 'Pakistan',     lat: 24.8607,   lon:  67.0011  },
+  { id: 'drc-cairo',          name: 'Cairo DRC',           country: 'Egypt',        lat: 30.0444,   lon:  31.2357  },
+  { id: 'drc-nairobi',        name: 'Nairobi DRC',         country: 'Kenya',        lat: -1.2921,   lon:  36.8219  },
+  { id: 'drc-lagos',          name: 'Lagos DRC',           country: 'Nigeria',      lat:  6.5244,   lon:   3.3792  },
+  { id: 'drc-johannesburg',   name: 'Johannesburg DRC',    country: 'South Africa', lat: -26.2041,  lon:  28.0473  },
+  { id: 'drc-singapore',      name: 'Singapore DRC',       country: 'Singapore',    lat:  1.3521,   lon: 103.8198  },
+  { id: 'drc-bangkok',        name: 'Bangkok DRC',         country: 'Thailand',     lat: 13.7563,   lon: 100.5018  },
+  { id: 'drc-jakarta',        name: 'Jakarta DRC',         country: 'Indonesia',    lat: -6.2088,   lon: 106.8456  },
+  { id: 'drc-shanghai',       name: 'Shanghai DRC',        country: 'China',        lat: 31.2304,   lon: 121.4737  },
+  { id: 'drc-tokyo',          name: 'Tokyo DRC',           country: 'Japan',        lat: 35.6762,   lon: 139.6503  },
+  { id: 'drc-sydney',         name: 'Sydney DRC',          country: 'Australia',    lat: -33.8688,  lon: 151.2093  },
+  { id: 'drc-new-york',       name: 'New York DRC',        country: 'USA',          lat: 40.7128,   lon: -74.0060  },
+  { id: 'drc-los-angeles',    name: 'Los Angeles DRC',     country: 'USA',          lat: 34.0522,   lon: -118.2437 },
+  { id: 'drc-chicago',        name: 'Chicago DRC',         country: 'USA',          lat: 41.8781,   lon: -87.6298  },
+  { id: 'drc-miami',          name: 'Miami DRC',           country: 'USA',          lat: 25.7617,   lon: -80.1918  },
+  { id: 'drc-toronto',        name: 'Toronto DRC',         country: 'Canada',       lat: 43.6532,   lon: -79.3832  },
+  { id: 'drc-mexico-city',    name: 'Mexico City DRC',     country: 'Mexico',       lat: 19.4326,   lon: -99.1332  },
+  { id: 'drc-sao-paulo',      name: 'São Paulo DRC',       country: 'Brazil',       lat: -23.5505,  lon: -46.6333  },
+  { id: 'drc-buenos-aires',   name: 'Buenos Aires DRC',    country: 'Argentina',    lat: -34.6037,  lon: -58.3816  },
+  { id: 'drc-lima',           name: 'Lima DRC',            country: 'Peru',         lat: -12.0464,  lon: -77.0428  },
+]

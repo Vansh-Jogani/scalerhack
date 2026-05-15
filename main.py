@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sim.world_state import WorldState
 from sim.sensor_overlay import SensorOverlay
 from orchestrator.orchestrator import ARIAOrchestrator
+from agents.agent1_surveillance import SurveillanceAgent
 
 load_dotenv()
 structlog.configure(
@@ -30,6 +31,7 @@ with open(config_path) as f:
 world_state: WorldState | None = None
 sensor_overlay: SensorOverlay | None = None
 orchestrator: ARIAOrchestrator | None = None
+active_agent1: SurveillanceAgent | None = None
 connected_clients: list[WebSocket] = []
 
 

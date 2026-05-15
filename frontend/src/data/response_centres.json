@@ -1,0 +1,155 @@
+[
+  {
+    "id": "hyd-fs-secunderabad",
+    "name": "Secunderabad Fire Station",
+    "type": "FIRE_STATION",
+    "lat": 17.4428,
+    "lon": 78.4880,
+    "address": "1-7-43/46, Sardar Patel Road, Secunderabad, 500003",
+    "verified": true
+  },
+  {
+    "id": "hyd-fs-filmnagar",
+    "name": "Film Nagar Fire Station",
+    "type": "FIRE_STATION",
+    "lat": 17.4169,
+    "lon": 78.4098,
+    "address": "Road No. 7, Jubilee Hills, Hyderabad, 500033",
+    "verified": true
+  },
+  {
+    "id": "hyd-fs-sanathnagar",
+    "name": "Sanath Nagar Fire Station",
+    "type": "FIRE_STATION",
+    "lat": 17.4500,
+    "lon": 78.4383,
+    "address": "Bank of Baroda Road, Sanath Nagar, Hyderabad, 500018",
+    "verified": true
+  },
+  {
+    "id": "hyd-fs-moghalpura",
+    "name": "Moghalpura Fire Station",
+    "type": "FIRE_STATION",
+    "lat": 17.3596,
+    "lon": 78.4767,
+    "address": "23-1-667, Opposite Madina Medical, Moghalpura, Hyderabad, 500002",
+    "verified": true
+  },
+  {
+    "id": "hyd-fs-highcourt",
+    "name": "High Court Fire Station",
+    "type": "FIRE_STATION",
+    "lat": 17.3698,
+    "lon": 78.4724,
+    "address": "High Court Area, Nampally, Hyderabad, 500001",
+    "verified": true
+  },
+  {
+    "id": "hyd-fs-kukatpally",
+    "name": "Kukatpally Fire Station",
+    "type": "FIRE_STATION",
+    "lat": 17.4921,
+    "lon": 78.3918,
+    "address": "KPHB Colony, Ward 114, Kukatpally, Hyderabad, 500072",
+    "verified": true
+  },
+  {
+    "id": "hyd-fs-madhapur",
+    "name": "Madhapur Fire Station",
+    "type": "FIRE_STATION",
+    "lat": 17.4493,
+    "lon": 78.3750,
+    "address": "Kondapur, Ward 104, Madhapur, Hyderabad, 500081",
+    "verified": true
+  },
+  {
+    "id": "hyd-ndrf-amberpet",
+    "name": "NDRF 10th Battalion Forward Base",
+    "type": "NDRF",
+    "lat": 17.4118,
+    "lon": 78.5342,
+    "address": "Amberpet Police Training College, Amberpet, Hyderabad, 500013",
+    "verified": true
+  },
+  {
+    "id": "hyd-sdrf-begumpet",
+    "name": "Telangana SDRF State Emergency Operations",
+    "type": "SDRF",
+    "lat": 17.4453,
+    "lon": 78.4719,
+    "address": "Monarick Building, Methodist Colony, Begumpet, Hyderabad, 500016",
+    "verified": true
+  },
+  {
+    "id": "hyd-hosp-apollo",
+    "name": "Apollo Hospitals Jubilee Hills",
+    "type": "HOSPITAL",
+    "lat": 17.4395,
+    "lon": 78.5049,
+    "address": "Plot No. 1, Road No. 72, Film Nagar, Jubilee Hills, Hyderabad, 500033",
+    "verified": true
+  },
+  {
+    "id": "hyd-hosp-osmania",
+    "name": "Osmania General Hospital",
+    "type": "HOSPITAL",
+    "lat": 17.3830,
+    "lon": 78.4744,
+    "address": "15-5-104, Afzal Gunj, Hyderabad, 500012",
+    "verified": false
+  },
+  {
+    "id": "hyd-hosp-nims",
+    "name": "Nizam's Institute of Medical Sciences (NIMS)",
+    "type": "HOSPITAL",
+    "lat": 17.4265,
+    "lon": 78.4477,
+    "address": "Punjagutta, Hyderabad, 500082",
+    "verified": false
+  },
+  {
+    "id": "hyd-police-iccc",
+    "name": "Telangana ICCC Emergency Control Room",
+    "type": "POLICE",
+    "lat": 17.4156,
+    "lon": 78.4498,
+    "address": "Tower-A, ICCC Building, Road No. 12, Banjara Hills, Hyderabad, 500034",
+    "verified": true
+  },
+  {
+    "id": "hyd-police-commr",
+    "name": "Hyderabad Police Commissioner's Office",
+    "type": "POLICE",
+    "lat": 17.3928,
+    "lon": 78.4737,
+    "address": "Basheerbagh, Hyderabad, 500004",
+    "verified": false
+  },
+  {
+    "id": "hyd-municipal-ghmc",
+    "name": "GHMC Disaster Management Cell",
+    "type": "MUNICIPAL_EMERGENCY",
+    "lat": 17.4062,
+    "lon": 78.4691,
+    "address": "CC Complex, Tank Bund Road, Lower Tank Bund, Hyderabad, 500063",
+    "verified": true
+  },
+  {
+    "id": "hyd-airport-rgia",
+    "name": "RGIA Airport Emergency Services",
+    "type": "AIRPORT_EMERGENCY",
+    "lat": 17.2403,
+    "lon": 78.4294,
+    "address": "Rajiv Gandhi International Airport, Shamshabad, Hyderabad, 501218",
+    "verified": true
+  },
+  {
+    "id": "hyd-civil-defence",
+    "name": "Telangana Civil Defence District HQ",
+    "type": "CIVIL_DEFENCE",
+    "lat": 17.3875,
+    "lon": 78.4564,
+    "address": "Civil Defence Organisation, Hyderabad District, Afzalgunj, Hyderabad, 500001",
+    "verified": false
+  }
+]
