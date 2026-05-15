@@ -12,10 +12,10 @@
   --warning:       #FFB800;
   --critical:      #FF3B3B;
 
-  --disaster-fire:        #FF4500;
-  --disaster-structural:  #FF8C00;
-  --disaster-flood:       #00BFFF;
-  --disaster-industrial:  #ADFF2F;
+  --disaster-fire:        #FF3B3B;
+  --disaster-structural:  #FF8C42;
+  --disaster-flood:       #2196F3;
+  --disaster-industrial:  #9E9E9E;
   --disaster-maritime:    #00CED1;
 
   --font-display: 'Rajdhani', sans-serif;
@@ -28,6 +28,16 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+button {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
 
 html, body, #root {

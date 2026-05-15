@@ -29,7 +29,7 @@ function AgentFeed({ onAdvisoryUpdate, activeIncidentType }) {
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return
 
-    const ws = new WebSocket(`ws://${window.location.host}/ws/agents`)
+    const ws = new WebSocket(`ws://${window.location.host}/ws`)
     wsRef.current = ws
 
     ws.onopen = () => {
@@ -40,19 +40,19 @@ function AgentFeed({ onAdvisoryUpdate, activeIncidentType }) {
     ws.onmessage = (evt) => {
       try {
         const msg = JSON.parse(evt.data)
-        if (msg.type !== 'agent_event') return
-
+        if (msg.type !== 'agent_stream') return
+        const d = msg.data || {}
+        const agent = (d.agent_id || '').replace('agent-', 'AGENT_').replace('orchestrator', 'ORCHESTRATOR').toUpperCase()
+        const text = typeof d.content === 'string' ? d.content : JSON.stringify(d.content)
         addEntry({
-          id: `${msg.timestamp}-${Math.random()}`,
-          agent: msg.agent,
-          timestamp: msg.timestamp,
-          text: msg.text,
-          incident_id: msg.incident_id,
+          id: `${Date.now()}-${Math.random()}`,
+          agent,
+          timestamp: new Date().toTimeString().slice(0, 8),
+          text: `${d.event ? d.event + '  ' : ''}${text}`,
+          incident_id: null,
         })
-
-        // Extract advisory from Agent 3
-        if (msg.agent === 'AGENT_3' && msg.text && onAdvisoryUpdate) {
-          onAdvisoryUpdate(msg.text, msg.timestamp)
+        if (agent === 'AGENT_3' && text && onAdvisoryUpdate) {
+          onAdvisoryUpdate(text, new Date().toISOString())
         }
       } catch (e) {
         console.warn('[AgentFeed] parse error', e)

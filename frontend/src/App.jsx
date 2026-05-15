@@ -1,20 +1,44 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Map from './Map'
-import AgentStream from './AgentStream'
-import AdvisoryPanel from './AdvisoryPanel'
-import DroneStatus from './DroneStatus'
+import CommandDashboard from './CommandDashboard'
+import MapStateManager from './MapStateManager'
+
+function deriveSystemStatus(incidents) {
+  const vals = Object.values(incidents)
+  if (vals.some((i) => i.status === 'EMERGENCY')) return 'EMERGENCY'
+  if (vals.length > 0) return 'ACTIVE'
+  return 'NOMINAL'
+}
+
+function useReconnectingWS(path, onMessage) {
+  const cbRef = useRef(onMessage)
+  cbRef.current = onMessage
+  useEffect(() => {
+    let ws
+    let stopped = false
+    function connect() {
+      const url = `ws://${window.location.hostname}:8080${path}`
+      ws = new WebSocket(url)
+      ws.onmessage = (e) => {
+        try { cbRef.current(JSON.parse(e.data)) } catch {}
+      }
+      ws.onclose = () => { if (!stopped) setTimeout(connect, 2000) }
+    }
+    connect()
+    return () => { stopped = true; ws?.close() }
+  }, [path])
+}
 
 function App() {
-  const [droneData, setDroneData] = useState({})
-  const [markers, setMarkers] = useState([])
-  const [agentStream, setAgentStream] = useState([])
+  const [incidents, setIncidents] = useState({})
+  const [isSelectingLocation, setIsSelectingLocation] = useState(false)
+  const [capturedCoords, setCapturedCoords] = useState(null)
   const [advisory, setAdvisory] = useState(null)
-  const ws = useRef(null)
 
   const activeIncidentType = Object.values(incidents)[0]?.type || null
   const systemStatus = deriveSystemStatus(incidents)
 
-  useReconnectingWS('/ws/map', useCallback((msg) => {
+  useReconnectingWS('/ws', useCallback((msg) => {
     if (msg.type === 'map_update') {
       MapStateManager.receive(msg)
       if (msg.action === 'add_marker' && msg.incident_id && msg.payload) {
@@ -75,7 +99,6 @@ function App() {
       overflow: 'hidden',
       background: 'var(--bg)',
     }}>
-      {/* LEFT: Full-height Map — 60% */}
       <div style={{ width: '60%', height: '100%', position: 'relative', flexShrink: 0 }}>
         <Map
           isSelectingLocation={isSelectingLocation}
@@ -85,37 +108,23 @@ function App() {
         />
       </div>
 
-      {/* RIGHT: Three-panel dashboard — 40% */}
       <div style={{
         width: '40%',
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
         borderLeft: '1px solid var(--border)',
-        background: 'var(--surface)',
+        background: '#0A0E14',
         flexShrink: 0,
       }}>
-        {/* TOP THIRD: Incident Command */}
-        <div style={{ flex: '0 0 33.333%', borderBottom: '1px solid var(--border)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <AdminPanel
-            isSelectingLocation={isSelectingLocation}
-            onStartSelectLocation={handleStartSelectLocation}
-            capturedCoords={capturedCoords}
-          />
-        </div>
-
-        {/* MIDDLE THIRD: Agent feed */}
-        <div style={{ flex: '0 0 33.333%', borderBottom: '1px solid var(--border)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <AgentFeed
-            onAdvisoryUpdate={handleAdvisoryUpdate}
-            activeIncidentType={activeIncidentType}
-          />
-        </div>
-
-        {/* BOTTOM THIRD: Advisory */}
-        <div style={{ flex: '0 0 33.333%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <AdvisoryPanel advisory={advisory} />
-        </div>
+        <CommandDashboard
+          isSelectingLocation={isSelectingLocation}
+          onStartSelectLocation={handleStartSelectLocation}
+          capturedCoords={capturedCoords}
+          activeIncidentType={activeIncidentType}
+          advisory={advisory}
+          onAdvisoryUpdate={handleAdvisoryUpdate}
+        />
       </div>
     </div>
   )
