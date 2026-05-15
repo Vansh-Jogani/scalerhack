@@ -56,3 +56,46 @@ def create_report_classification_handler(orchestrator):
         orchestrator.receive_agent1_report(kwargs)
         return {"status": "ok", "message": "Classification reported to orchestrator"}
     return report_classification
+
+
+ISSUE_ADVISORY_TOOL = {
+    "name": "issue_advisory",
+    "description": "Issue a structured advisory for first responders.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "situation_summary": {"type": "string"},
+            "immediate_actions": {"type": "array", "items": {"type": "string"}, "maxItems": 5},
+            "exclusion_zones": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "lat": {"type": "number"},
+                        "lon": {"type": "number"},
+                        "radius_m": {"type": "number"},
+                        "reason": {"type": "string"},
+                    },
+                    "required": ["lat", "lon", "radius_m", "reason"],
+                },
+            },
+            "resource_requirements": {"type": "array", "items": {"type": "string"}},
+            "risk_flags": {"type": "array", "items": {"type": "string"}},
+            "monitoring_status": {"type": "string"},
+            "last_updated": {"type": "string"},
+            "based_on": {
+                "type": "object",
+                "properties": {
+                    "incident_id": {"type": "string"},
+                    "coverage_pct": {"type": "number"},
+                },
+                "required": ["incident_id", "coverage_pct"],
+            },
+        },
+        "required": [
+            "situation_summary", "immediate_actions", "exclusion_zones",
+            "resource_requirements", "risk_flags", "monitoring_status",
+            "last_updated", "based_on",
+        ],
+    },
+}

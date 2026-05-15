@@ -1,5 +1,6 @@
-"""SensorOverlay and flight_tools handler tests."""
+"""SensorOverlay and flight_tools handler tests — radius-based API."""
 
+import math
 import pytest
 
 from sim.sensor_overlay import SensorOverlay, point_in_polygon
@@ -8,10 +9,9 @@ from agents.tools.flight_tools import create_fly_to_handler
 
 
 # ---------------------------------------------------------------------------
-# point_in_polygon
+# point_in_polygon (utility function — still exists)
 # ---------------------------------------------------------------------------
 
-# Square polygon: corners at (±0.01, ±0.01)
 SQUARE = [
     [0.01, -0.01],
     [0.01,  0.01],
@@ -29,37 +29,45 @@ def test_point_outside_polygon():
 
 
 def test_point_on_boundary_treated_consistently():
-    # Ray-casting gives a definite answer at boundary; just ensure no crash
     result = point_in_polygon(0.01, 0.0, SQUARE)
     assert isinstance(result, bool)
 
 
 # ---------------------------------------------------------------------------
-# SensorOverlay
+# SensorOverlay — radius-based API
 # ---------------------------------------------------------------------------
+
+# Centre at (17.395, 78.496), radius 600 m
+_LAT = 17.395
+_LON = 78.496
+_RAD = 600.0
+
+
+def _drone_at(ws: WorldState, lat: float, lon: float) -> None:
+    ws.add_drone("d1", "fixed_wing", lat, lon)
+
 
 def test_no_reading_without_incident():
     sensor = SensorOverlay()
     ws = WorldState()
-    ws.add_drone("d1", "fixed_wing", 0.0, 0.0)
-    reading = sensor.get_reading("d1", ws)
-    assert reading is None
+    ws.add_drone("d1", "fixed_wing", _LAT, _LON)
+    assert sensor.get_reading("d1", ws) is None
 
 
-def test_no_reading_outside_polygon():
+def test_no_reading_outside_radius():
     sensor = SensorOverlay()
-    sensor.set_incident(SQUARE, "fire")
+    sensor.set_incident(_LAT, _LON, _RAD, "fire")
     ws = WorldState()
-    ws.add_drone("d1", "fixed_wing", 5.0, 5.0)  # far outside
-    reading = sensor.get_reading("d1", ws)
-    assert reading is None
+    # 5 km away — well outside 600 m radius
+    ws.add_drone("d1", "fixed_wing", _LAT + 0.05, _LON + 0.05)
+    assert sensor.get_reading("d1", ws) is None
 
 
-def test_fire_reading_inside_polygon():
+def test_fire_reading_inside_radius():
     sensor = SensorOverlay()
-    sensor.set_incident(SQUARE, "fire")
+    sensor.set_incident(_LAT, _LON, _RAD, "fire")
     ws = WorldState()
-    ws.add_drone("d1", "fixed_wing", 0.0, 0.0)  # inside polygon
+    ws.add_drone("d1", "fixed_wing", _LAT, _LON)  # exactly at centre
     reading = sensor.get_reading("d1", ws)
     assert reading is not None
     assert reading["thermal_detected"] is True
@@ -70,9 +78,9 @@ def test_fire_reading_inside_polygon():
 
 def test_structural_collapse_reading():
     sensor = SensorOverlay()
-    sensor.set_incident(SQUARE, "structural_collapse")
+    sensor.set_incident(_LAT, _LON, _RAD, "structural_collapse")
     ws = WorldState()
-    ws.add_drone("d1", "fixed_wing", 0.0, 0.0)
+    ws.add_drone("d1", "fixed_wing", _LAT, _LON)
     reading = sensor.get_reading("d1", ws)
     assert reading is not None
     assert "unstable_structure" in reading["hazard_flags"]
@@ -80,9 +88,9 @@ def test_structural_collapse_reading():
 
 def test_flood_reading():
     sensor = SensorOverlay()
-    sensor.set_incident(SQUARE, "flood")
+    sensor.set_incident(_LAT, _LON, _RAD, "flood")
     ws = WorldState()
-    ws.add_drone("d1", "fixed_wing", 0.0, 0.0)
+    ws.add_drone("d1", "fixed_wing", _LAT, _LON)
     reading = sensor.get_reading("d1", ws)
     assert reading is not None
     assert reading["thermal_detected"] is False
@@ -91,14 +99,25 @@ def test_flood_reading():
 
 def test_unknown_drone_returns_none():
     sensor = SensorOverlay()
-    sensor.set_incident(SQUARE, "fire")
+    sensor.set_incident(_LAT, _LON, _RAD, "fire")
     ws = WorldState()
-    reading = sensor.get_reading("ghost_drone", ws)
-    assert reading is None
+    assert sensor.get_reading("ghost_drone", ws) is None
+
+
+def test_reading_at_exact_boundary():
+    """Drone exactly at radius_m distance — should return data."""
+    sensor = SensorOverlay()
+    sensor.set_incident(_LAT, _LON, _RAD, "fire")
+    ws = WorldState()
+    # Place drone ~599 m north (inside)
+    lat_offset = 599.0 / 111320.0
+    ws.add_drone("d1", "fixed_wing", _LAT + lat_offset, _LON)
+    reading = sensor.get_reading("d1", ws)
+    assert reading is not None
 
 
 # ---------------------------------------------------------------------------
-# fly_to handler (T2.3 / Checkpoint 6)
+# fly_to handler
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio

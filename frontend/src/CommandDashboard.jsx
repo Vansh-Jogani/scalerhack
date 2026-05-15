@@ -219,10 +219,13 @@ export default function CommandDashboard({
         const msg = JSON.parse(evt.data)
         if (msg.type !== 'agent_stream') return
         const d = msg.data || {}
-        const agent = (d.agent_id || '')
-          .replace('agent-', 'AGENT_')
-          .replace('orchestrator', 'ORCHESTRATOR')
-          .toUpperCase()
+        const rawId = (d.agent_id || '').toLowerCase()
+        let agent = 'ORCHESTRATOR'
+        if (rawId.startsWith('agent-1')) agent = 'AGENT_1'
+        else if (rawId.startsWith('agent-2')) agent = 'AGENT_2'
+        else if (rawId.startsWith('agent-3')) agent = 'AGENT_3'
+        else if (rawId === 'world') agent = 'ORCHESTRATOR'
+        else if (rawId.includes('orchestrator')) agent = 'ORCHESTRATOR'
         const content = typeof d.content === 'string' ? d.content : JSON.stringify(d.content)
         addEntry({
           id: `${Date.now()}-${Math.random()}`,
@@ -231,8 +234,9 @@ export default function CommandDashboard({
           content,
           ts: new Date().toTimeString().slice(0, 8),
         })
-        if (agent === 'AGENT_3' && onAdvisoryUpdate) {
-          onAdvisoryUpdate(content, new Date().toISOString())
+        if ((agent === 'AGENT_3' && d.event === 'advisory_issued') || d.event === 'advisory_updated') {
+          const advisoryContent = typeof d.content === 'object' ? d.content : content
+          if (onAdvisoryUpdate) onAdvisoryUpdate(advisoryContent, new Date().toISOString())
           setTab('advisory')
         }
       } catch {}

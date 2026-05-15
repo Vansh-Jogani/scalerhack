@@ -12,5 +12,4 @@ simulation:
 models:
   agent1: "claude-haiku-4-5-20251001"
   agent2: "claude-haiku-4-5-20251001"
-  agent3_endpoint: "http://localhost:11434/api/chat"
-  agent3_model: "llama3.1:8b"
+  agent3: "claude-haiku-4-5-20251001"

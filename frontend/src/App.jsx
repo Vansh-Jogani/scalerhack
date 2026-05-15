@@ -17,7 +17,7 @@ function useReconnectingWS(path, onMessage) {
     let ws
     let stopped = false
     function connect() {
-      const url = `ws://${window.location.hostname}:8080${path}`
+      const url = `ws://${window.location.host}${path}`
       ws = new WebSocket(url)
       ws.onmessage = (e) => {
         try { cbRef.current(JSON.parse(e.data)) } catch {}
@@ -39,6 +39,7 @@ function App() {
   const systemStatus = deriveSystemStatus(incidents)
 
   useReconnectingWS('/ws', useCallback((msg) => {
+    // ── Map state ──────────────────────────────────────────────────────
     if (msg.type === 'map_update') {
       MapStateManager.receive(msg)
       if (msg.action === 'add_marker' && msg.incident_id && msg.payload) {
@@ -58,6 +59,8 @@ function App() {
         })
       }
     }
+
+    // ── Drone telemetry (legacy + new) ─────────────────────────────────
     if (msg.type === 'telemetry') {
       MapStateManager.receive({
         type: 'map_update',
@@ -66,6 +69,8 @@ function App() {
         payload: msg.data,
       })
     }
+
+    // ── Scenario markers ───────────────────────────────────────────────
     if (msg.type === 'markers') {
       msg.data?.forEach((m) => {
         MapStateManager.receive({
@@ -73,6 +78,47 @@ function App() {
           action: 'add_marker',
           incident_id: m.id,
           payload: { lat: m.lat, lon: m.lon, type: m.type, severity: m.severity || 'MEDIUM', status: 'ACTIVE' },
+        })
+        setIncidents((prev) => ({
+          ...prev,
+          [m.id]: { type: m.type, severity: m.severity || 'medium', status: 'ACTIVE' },
+        }))
+      })
+    }
+
+    // ── Agent 3 advisory (structured) ─────────────────────────────────
+    if (msg.type === 'advisory' && msg.data) {
+      setAdvisory({ text: msg.data, timestamp: new Date().toISOString() })
+    }
+
+    // ── Zone circles from Agent 2 ──────────────────────────────────────
+    if (msg.type === 'zones' && Array.isArray(msg.data)) {
+      msg.data.forEach((zone) => {
+        MapStateManager.receive({
+          type: 'map_update',
+          action: 'add_zone',
+          incident_id: zone.incident_id || null,
+          payload: zone,
+        })
+      })
+    }
+
+    // ── Survivor markers from Agent 2 ──────────────────────────────────
+    if (msg.type === 'survivors' && Array.isArray(msg.data)) {
+      msg.data.forEach((survivor) => {
+        MapStateManager.receive({
+          type: 'map_update',
+          action: 'add_survivor',
+          incident_id: null,
+          payload: {
+            id: survivor.id,
+            lat: survivor.lat,
+            lon: survivor.lon,
+            survivor_count: survivor.count,
+            probability: survivor.probability,
+            detected_by: 'swarm',
+            time: new Date().toLocaleTimeString(),
+          },
         })
       })
     }

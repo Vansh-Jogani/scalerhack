@@ -4,6 +4,28 @@
 > Add an entry after: stage completion, blocker hit, architectural decision, end of session.
 > Format below. Keep entries tight — full prose belongs in `CONTEXT.md`.
 
+2026-05-16 — Stage 2 rebuild complete — recreated all lost changes from handover notes; 62/62 tests passing
+**What was rebuilt:**
+- prompts/registry.py + 8 markdown prompt files (agent1/2/3 + _shared/safety_rules/output_contracts/notes)
+- agents/messages.py: SurveillanceReport, SwarmFindings, IncidentBriefing, WorldEvent Pydantic models
+- orchestrator/event_bus.py: async pub-sub, 500ms coalesce, 60s heartbeat
+- agents/tools/schemas.py: ISSUE_ADVISORY_TOOL added to report_tools.py
+- sim/sensor_overlay.py: radius-based (set_incident takes center_lat, center_lon, radius_m, disaster_type)
+- sim/world_state.py: zones, survivor_markers, hazard_markers + add/get methods
+- agents/agent1_surveillance.py: registry, tool_choice=report_classification, loiter-to-center, prompt_version_hash
+- agents/agent2_specialist.py: registry, fill_template, incident_id, prompt_version_hash injection
+- agents/agent3_advisory.py: Claude API (no Ollama), tool_choice=issue_advisory, registry, simplified constructor
+- orchestrator/orchestrator.py: full LangGraph rewrite — ARIAState TypedDict, graph START→surveillance→swarm→advisory→END, asyncio.Future bridge, EventBus wired (5 trigger types, 500ms coalesce, heartbeat)
+- config.yaml: removed agent3_endpoint/agent3_model, added agent2/agent3 (all claude-haiku-4-5)
+- requirements.txt: langgraph>=0.2, langgraph-checkpoint-sqlite>=1.0, aiosqlite>=0.20, typing_extensions>=4.0
+- main.py: LangGraph AsyncSqliteSaver in lifespan, /api/incident/create endpoint, zone/survivor broadcast, model_a1/a2/a3 constructor
+- frontend/src/App.jsx: advisory/zones/survivors from WS broadcast
+- frontend/src/MapStateManager.js: add_zone action with colored dashed circles
+- tests/test_sensor_and_tools.py: updated for radius-based SensorOverlay API (62 tests pass)
+**Next:** Deploy with ANTHROPIC_API_KEY in .env and verify Stage 2 CPs 7–11 live
+
+---
+
 2026-05-16 — two-agent dispatch animation complete — fixed-wing surveillance orbit + assessment panel + rotary swarm burst sequence — DispatchAnimation.js created, Map.jsx + AgentFeed.jsx updated, clean build
 
 2026-05-16 — response centres layer added — 17 centres loaded from src/data/response_centres.json, colour-coded by type (FIRE_STATION/#4FC3F7, HOSPITAL/#E53935, POLICE/#5E35B1, NDRF/#1565C0, SDRF/#1E88E5, CIVIL_DEFENCE/#00897B, AIRPORT_EMERGENCY/#F4511E, MUNICIPAL_EMERGENCY/#039BE5), ring+dot+label layers, click popup, labels appear at zoom 13+, unverified entries at reduced opacity. `responseCentres` re-exported from Map.jsx for agent nearest-centre computation.
