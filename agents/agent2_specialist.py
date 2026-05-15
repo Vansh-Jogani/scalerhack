@@ -208,8 +208,8 @@ class SpecialistAgent:
         self._running = True
         area = agent1_report.get("area", {})
         center = area.get("center", {})
-        center_lat = center.get("lat", 34.058)
-        center_lon = center.get("lon", -118.24)
+        center_lat = center.get("lat", 17.3950)
+        center_lon = center.get("lon", 78.4967)
         radius_m = area.get("radius_m", 200.0)
 
         # Determine drone type from swarm config
