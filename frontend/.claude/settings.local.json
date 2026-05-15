@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import fastapi, uvicorn, structlog, yaml, dotenv, pydantic, anthropic; print\\('all imports ok'\\)\")",
+      "Bash(python3 -c \"import fastapi, uvicorn, structlog, yaml, dotenv, pydantic, anthropic; print\\('all imports ok'\\)\")",
+      "Bash(pip3 install *)",
+      "Bash(bash setup.sh)",
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(pkill -f \"python3 main.py\")",
+      "Bash(pkill -f \"vite\")",
+      "Bash(npm install *)"
+    ]
+  }
+}

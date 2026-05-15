@@ -13,6 +13,34 @@ function Map({ drones, markers }) {
   const animationTargets = useRef({})
   const [mapReady, setMapReady] = useState(false)
 
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+      {Object.entries(typeCounts).map(([type, count]) => {
+        const color = DISASTER_COLORS[type] || '#E8EDF5'
+        const label = DISASTER_LABELS[type] || type
+        return (
+          <div
+            key={type}
+            className="incident-badge"
+            style={{ color, borderColor: color }}
+          >
+            <span>{count}</span>
+            <span>{label}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function Map({ isSelectingLocation, onLocationSelect, incidents, systemStatus }) {
+  const containerRef = useRef(null)
+  const mapRef = useRef(null)
+  const [coords, setCoords] = useState({ lat: 0, lon: 0 })
+  const [mapReady, setMapReady] = useState(false)
+  const selectingRef = useRef(isSelectingLocation)
+
+  // Keep selectingRef in sync so the click handler closure sees the latest value
   useEffect(() => {
     if (map.current) return
     map.current = new mapboxgl.Map({
@@ -30,7 +58,7 @@ function Map({ drones, markers }) {
       map.current?.remove()
       map.current = null
     }
-  }, [])
+  }, [isSelectingLocation])
 
   // Add/update drone icons — only once map style is ready
   useEffect(() => {
@@ -70,8 +98,6 @@ function Map({ drones, markers }) {
       })
       frameId = requestAnimationFrame(animate)
     }
-    frameId = requestAnimationFrame(animate)
-    return () => cancelAnimationFrame(frameId)
   }, [])
 
   // Add disaster markers — only once map style is ready
