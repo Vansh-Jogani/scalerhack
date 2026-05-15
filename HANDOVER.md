@@ -6,6 +6,42 @@
 
 ---
 
+## [2026-05-15 22:40] — Stage 1 test suite created, 61/61 passing
+**Stage:** Stage 1 (in progress)
+**State:** working
+**What got done:**
+- Added `return_to_launch()` abstract method to `DroneInterface` (was missing — DroneModel had it, interface didn't enforce it)
+- Created `pytest.ini` (asyncio_mode=auto)
+- Created `tests/` directory with `conftest.py`, `__init__.py`
+- `tests/test_drone_interface.py` — T3.5: ABC enforcement, DroneModel implements all abstract methods, MockSITLDrone stub, no agent imports DroneModel directly
+- `tests/test_drone_model.py` — T3.1-T3.4: haversine math, 1km arrival timing (~55s ±2s), all class defaults, full state machine (IDLE→FLYING→LOITERING→RTL→IDLE), loiter hold, battery drain
+- `tests/test_world_state.py` — add_drone, tick, command_drone, telemetry format, scenario load, malformed command rejection
+- `tests/test_sensor_and_tools.py` — point_in_polygon, sensor readings per disaster type, fly_to handler ok/error, tick moves drone after command
+- `tests/test_base_agent.py` — T4.1: observe pulls markers+telemetry, act executes tool_use blocks, full observe→reason→act cycle with mocked Anthropic client + real fly_to handler confirms drone enters FLYING
+- Result: **61 passed, 0 failed** in 4.96s
+**What's next:**
+- Checkpoint 4: frontend drone icon moving on Mapbox map (needs browser + Mapbox token)
+- Checkpoint 5: base_agent.py live loop test (Anthropic API key required)
+- Checkpoint 6: confirmed via test_base_agent.py::test_run_one_cycle_with_mocked_client ✅
+**Blockers / open questions:**
+- Mapbox token required for frontend checkpoint 4
+- Live Anthropic API test for checkpoint 5 (checkpoint 6 covered by mock test)
+**Files touched:**
+- sim/drone_interface.py (added return_to_launch abstract method)
+- pytest.ini (new)
+- tests/__init__.py (new)
+- tests/conftest.py (new)
+- tests/test_drone_interface.py (new)
+- tests/test_drone_model.py (new)
+- tests/test_world_state.py (new)
+- tests/test_sensor_and_tools.py (new)
+- tests/test_base_agent.py (new)
+**Notes for next session:**
+- Checkpoint 6 is proven by test; checkpoints 4-5 need live external services
+- FULL_SYSTEM_TEST.md categories T3 and T4.1 are now implemented and green
+
+---
+
 ## Entry template (copy this)
 
 ```
