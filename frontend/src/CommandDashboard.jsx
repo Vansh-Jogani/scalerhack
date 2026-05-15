@@ -263,24 +263,31 @@ export default function CommandDashboard({
 
   async function deploy() {
     if (!canDeploy) return
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      setDeployStatus('failed')
+      setTimeout(() => setDeployStatus('idle'), 3000)
+      return
+    }
     setDeployStatus('dispatching')
     try {
-      const res = await fetch('/api/incident/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lat: coords.lat,
-          lon: coords.lon,
-          type: selectedType.toLowerCase(),
+      wsRef.current.send(JSON.stringify({
+        type: 'command',
+        action: 'go',
+        data: {
+          area: {
+            center: { lat: coords.lat, lon: coords.lon },
+            radius_m: coords.radius_m ?? 200,
+            boundary_polygon: coords.vertices ?? null,
+          },
+          disaster_type: selectedType.toLowerCase(),
           severity: selectedSeverity.toLowerCase(),
-          zone_radius_m: coords.radius_m ?? null,
-          zone_polygon: coords.vertices ?? null,
-        }),
-      })
-      if (res.ok) { setDeployStatus('active'); setTimeout(() => setDeployStatus('idle'), 4000) }
-      else        { setDeployStatus('failed'); setTimeout(() => setDeployStatus('idle'), 3000) }
+        },
+      }))
+      setDeployStatus('active')
+      setTimeout(() => setDeployStatus('idle'), 4000)
     } catch {
-      setDeployStatus('failed'); setTimeout(() => setDeployStatus('idle'), 3000)
+      setDeployStatus('failed')
+      setTimeout(() => setDeployStatus('idle'), 3000)
     }
   }
 
