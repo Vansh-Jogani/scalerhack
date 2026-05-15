@@ -469,7 +469,7 @@ export default function CommandDashboard({
             background: canDeploy ? accent : '#0A0E14',
             border: `1px solid ${canDeploy ? accent : '#1A2535'}`,
             borderRadius: 3,
-            color: canDeploy ? '#0A0E14' : '#4A6A8A',
+            color: canDeploy ? '#FFFFFF' : '#4A6A8A',
             fontFamily: 'var(--font-display)',
             fontSize: 11,
             fontWeight: 700,
