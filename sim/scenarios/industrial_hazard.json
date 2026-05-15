@@ -1,0 +1,25 @@
+{
+  "name": "industrial_hazard_test",
+  "markers": [
+    {
+      "id": "marker-ih-001",
+      "lat": 34.040,
+      "lon": -118.310,
+      "type": "industrial_hazard",
+      "radius_m": 300.0,
+      "severity": "critical",
+      "confirmed": true
+    }
+  ],
+  "home_position": {
+    "lat": 34.030,
+    "lon": -118.320,
+    "alt": 0.0
+  },
+  "boundary_polygon": [
+    [34.037, -118.313],
+    [34.043, -118.313],
+    [34.043, -118.307],
+    [34.037, -118.307]
+  ]
+}

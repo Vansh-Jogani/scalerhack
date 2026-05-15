@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
-import MapStateManager from './MapStateManager.js'
-import DroneManager from './DroneManager.js'
-import { DEFAULT_CENTER, DEFAULT_ZOOM, DISASTER_COLORS, DISASTER_LABELS } from './constants.js'
+import 'mapbox-gl/dist/mapbox-gl.css'
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN
+console.log('[ARIA] token:', import.meta.env.VITE_MAPBOX_TOKEN ? import.meta.env.VITE_MAPBOX_TOKEN.slice(0, 15) + '…' : 'MISSING')
 
-function IncidentBadges({ incidents }) {
-  const typeCounts = {}
-  Object.values(incidents).forEach(({ type }) => {
-    const key = type.toUpperCase().replace(/ /g, '_')
-    typeCounts[key] = (typeCounts[key] || 0) + 1
-  })
+function Map({ drones, markers }) {
+  const mapContainer = useRef(null)
+  const map = useRef(null)
+  const droneMarkers = useRef({})
+  const markerLayers = useRef({})
+  const animationTargets = useRef({})
+  const [mapReady, setMapReady] = useState(false)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
@@ -42,92 +42,79 @@ function Map({ isSelectingLocation, onLocationSelect, incidents, systemStatus })
 
   // Keep selectingRef in sync so the click handler closure sees the latest value
   useEffect(() => {
-    selectingRef.current = isSelectingLocation
-    if (mapRef.current) {
-      mapRef.current.getCanvas().style.cursor = isSelectingLocation ? 'crosshair' : ''
+    if (map.current) return
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/dark-v11',
+      center: [-118.2437, 34.0522],
+      zoom: 13,
+    })
+    map.current.on('load', () => {
+      console.log('[ARIA] Map loaded ✓')
+      setMapReady(true)
+    })
+    map.current.on('error', (e) => console.error('[ARIA] Map error:', e))
+    return () => {
+      map.current?.remove()
+      map.current = null
     }
   }, [isSelectingLocation])
 
+  // Add/update drone icons — only once map style is ready
   useEffect(() => {
-    if (mapRef.current) return
+    if (!mapReady) return
+    console.log('[ARIA] drones effect, count:', Object.keys(drones).length)
+    Object.entries(drones).forEach(([id, data]) => {
+      animationTargets.current[id] = { lat: data.lat, lon: data.lon, heading: data.heading }
+      if (droneMarkers.current[id]) return
 
-    mapRef.current = new mapboxgl.Map({
-      container: containerRef.current,
-      style: 'mapbox://styles/mapbox/dark-v11',
-      center: DEFAULT_CENTER,
-      zoom: DEFAULT_ZOOM,
-      attributionControl: false,
+      const wrapper = document.createElement('div')
+      wrapper.style.cssText = 'width:24px;height:24px;display:flex;align-items:center;justify-content:center;'
+      const arrow = document.createElement('div')
+      arrow.className = 'drone-arrow'
+      arrow.style.cssText = 'width:16px;height:16px;background:#00ffaa;clip-path:polygon(50% 0%,0% 100%,100% 100%);'
+      wrapper.appendChild(arrow)
+
+      droneMarkers.current[id] = new mapboxgl.Marker({ element: wrapper })
+        .setLngLat([data.lon, data.lat])
+        .addTo(map.current)
     })
+  }, [drones, mapReady])
 
-    mapRef.current.addControl(
-      new mapboxgl.AttributionControl({ compact: true }),
-      'bottom-right'
-    )
-
-    mapRef.current.on('load', () => {
-      MapStateManager.init(mapRef.current, DroneManager, null)
-      DroneManager.init(mapRef.current)
-      setMapReady(true)
-    })
-
-    mapRef.current.on('mousemove', (e) => {
-      setCoords({ lat: e.lngLat.lat, lon: e.lngLat.lng })
-    })
-
-    mapRef.current.on('click', (e) => {
-      if (!selectingRef.current) return
-      if (onLocationSelect) onLocationSelect({ lat: e.lngLat.lat, lon: e.lngLat.lng })
-    })
-
-    return () => {
-      DroneManager.destroy()
-      MapStateManager.destroy()
-      mapRef.current?.remove()
-      mapRef.current = null
+  // RAF lerp loop
+  useEffect(() => {
+    let frameId
+    const animate = () => {
+      Object.entries(droneMarkers.current).forEach(([id, marker]) => {
+        const target = animationTargets.current[id]
+        if (!target) return
+        const cur = marker.getLngLat()
+        marker.setLngLat([
+          cur.lng + (target.lon - cur.lng) * 0.1,
+          cur.lat + (target.lat - cur.lat) * 0.1,
+        ])
+        const arrow = marker.getElement().querySelector('.drone-arrow')
+        if (arrow) arrow.style.transform = `rotate(${target.heading || 0}deg)`
+      })
+      frameId = requestAnimationFrame(animate)
     }
   }, [])
 
-  const statusColors = {
-    NOMINAL: '#00FF88',
-    ACTIVE: '#FFB800',
-    EMERGENCY: '#FF3B3B',
-  }
-  const statusColor = statusColors[systemStatus] || statusColors.NOMINAL
+  // Add disaster markers — only once map style is ready
+  useEffect(() => {
+    if (!mapReady) return
+    console.log('[ARIA] markers effect, count:', markers.length)
+    markers.forEach((m) => {
+      if (markerLayers.current[m.id]) return
+      const el = document.createElement('div')
+      el.style.cssText = 'width:16px;height:16px;background:#ff4444;border-radius:50%;border:2px solid #ff8888;box-shadow:0 0 8px #ff4444;'
+      markerLayers.current[m.id] = new mapboxgl.Marker({ element: el })
+        .setLngLat([m.lon, m.lat])
+        .addTo(map.current)
+    })
+  }, [markers, mapReady])
 
-  return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
-
-      {/* Top-left: ARIA wordmark + status */}
-      <div
-        className="map-overlay interactive"
-        style={{ top: 14, left: 14, display: 'flex', alignItems: 'center', gap: 10 }}
-      >
-        <span className="aria-wordmark">ARIA</span>
-        <div
-          className="status-badge"
-          style={{ color: statusColor, borderColor: statusColor }}
-        >
-          {systemStatus || 'NOMINAL'}
-        </div>
-      </div>
-
-      {/* Top-right: incident counters */}
-      {Object.keys(incidents).length > 0 && (
-        <div className="map-overlay" style={{ top: 14, right: 14 }}>
-          <IncidentBadges incidents={incidents} />
-        </div>
-      )}
-
-      {/* Bottom-left: coordinate readout */}
-      <div className="map-overlay" style={{ bottom: 32, left: 14 }}>
-        <div className="coord-readout">
-          LAT {coords.lat.toFixed(4).padStart(9, ' ')}{'  '}
-          LON {coords.lon.toFixed(4).padStart(10, ' ')}
-        </div>
-      </div>
-    </div>
-  )
+  return <div ref={mapContainer} style={{ position: 'absolute', inset: 0 }} />
 }
 
 export default Map

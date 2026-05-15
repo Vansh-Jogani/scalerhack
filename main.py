@@ -33,14 +33,37 @@ orchestrator: ARIAOrchestrator | None = None
 connected_clients: list[WebSocket] = []
 
 
+async def broadcast_event(event_type: str, data: dict) -> None:
+    """Broadcast an event to all connected WebSocket clients."""
+    msg = {"type": event_type, "data": data}
+    for ws in list(connected_clients):
+        try:
+            await ws.send_json(msg)
+        except Exception:
+            if ws in connected_clients:
+                connected_clients.remove(ws)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global world_state, sensor_overlay, orchestrator
     scenario_path = Path(config["simulation"]["scenario"])
     world_state = WorldState(scenario_path)
     sensor_overlay = SensorOverlay()
-    orchestrator = ARIAOrchestrator(world_state, sensor_overlay)
-    world_state.add_drone("drone-001", "fixed_wing", world_state.home_position["lat"], world_state.home_position["lon"])
+    orchestrator = ARIAOrchestrator(
+        world_state,
+        sensor_overlay,
+        model=config["models"]["agent1"],
+        agent3_endpoint=config["models"]["agent3_endpoint"],
+        agent3_model=config["models"]["agent3_model"],
+    )
+    orchestrator.set_event_callback(broadcast_event)
+
+    world_state.add_drone(
+        "drone-001", "fixed_wing",
+        world_state.home_position["lat"],
+        world_state.home_position["lon"],
+    )
     tick_rate = config["simulation"]["tick_rate_hz"]
     tick_task = asyncio.create_task(tick_loop(tick_rate))
     broadcast_task = asyncio.create_task(broadcast_loop())
@@ -68,8 +91,20 @@ async def broadcast_loop():
                         await ws.send_json({"type": "telemetry", "data": t})
                     await ws.send_json({"type": "markers", "data": markers})
                 except Exception:
-                    connected_clients.remove(ws)
+                    if ws in connected_clients:
+                        connected_clients.remove(ws)
         await asyncio.sleep(0.1)
+
+
+async def world_event_task(delay: int = 30):
+    """Fire a world event after delay seconds — grows the first marker's radius."""
+    await asyncio.sleep(delay)
+    if world_state and world_state.markers:
+        m = world_state.markers[0]
+        m.radius_m += 50.0
+        event = {"type": "fire_growth", "marker_id": m.id, "new_radius_m": m.radius_m}
+        logger.info("world_event_fired", **event)
+        await orchestrator.trigger_world_event(event)
 
 
 app = FastAPI(title="ARIA v1", lifespan=lifespan)
@@ -97,10 +132,15 @@ async def websocket_endpoint(websocket: WebSocket):
                     world_state.command_drone(payload["drone_id"], payload["lat"], payload["lon"], payload["alt"])
                     await websocket.send_json({"type": "ack", "action": "fly_to", "status": "ok"})
                 elif action == "go":
-                    agent1_payload = orchestrator.receive_go_signal(msg["data"])
-                    await websocket.send_json({"type": "ack", "action": "go", "status": "ok", "agent1_payload": agent1_payload})
+                    agent1_payload = await orchestrator.receive_go_signal(msg["data"])
+                    await websocket.send_json({
+                        "type": "ack", "action": "go", "status": "ok",
+                        "agent1_payload": agent1_payload,
+                    })
+                    asyncio.create_task(world_event_task(delay=30))
     except WebSocketDisconnect:
-        connected_clients.remove(websocket)
+        if websocket in connected_clients:
+            connected_clients.remove(websocket)
         logger.info("ws_disconnected")
 
 

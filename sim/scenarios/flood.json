@@ -1,0 +1,25 @@
+{
+  "name": "flood_test",
+  "markers": [
+    {
+      "id": "marker-fl-001",
+      "lat": 34.075,
+      "lon": -118.195,
+      "type": "flood",
+      "radius_m": 500.0,
+      "severity": "high",
+      "confirmed": true
+    }
+  ],
+  "home_position": {
+    "lat": 34.065,
+    "lon": -118.205,
+    "alt": 0.0
+  },
+  "boundary_polygon": [
+    [34.070, -118.200],
+    [34.080, -118.200],
+    [34.080, -118.190],
+    [34.070, -118.190]
+  ]
+}

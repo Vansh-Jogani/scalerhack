@@ -68,13 +68,15 @@ def _compute_orbit_point(center_lat, center_lon, radius_m, angle_deg):
 class SurveillanceAgent:
     """Agent 1: flies expanding circle pattern, classifies incident from sensor data."""
 
-    def __init__(self, agent_id: str, model: str, world_state, sensor_overlay, orchestrator, drone_id: str):
+    def __init__(self, agent_id: str, model: str, world_state, sensor_overlay, orchestrator, drone_id: str,
+                 stream_callback=None):
         self.agent_id = agent_id
         self.model = model
         self.world_state = world_state
         self.sensor_overlay = sensor_overlay
         self.orchestrator = orchestrator
         self.drone_id = drone_id
+        self.stream_callback = stream_callback
         self.client = AsyncAnthropic()
         self._running = False
 
@@ -93,7 +95,7 @@ class SurveillanceAgent:
         self.classification_reported = False
 
     async def receive_go(self, payload: dict):
-        """Receive GO signal (coordinates only) and start survey."""
+        """Receive GO signal (coordinates only) and run survey to completion."""
         self.target_coords = payload["coordinates"]
         self.survey_state = "TRANSIT"
         self.current_radius_idx = 0
@@ -101,7 +103,7 @@ class SurveillanceAgent:
         self.sensor_readings = []
         self.classification_reported = False
         logger.info("agent1_go_received", coords=self.target_coords)
-        asyncio.create_task(self._run_survey())
+        await self._run_survey()
 
     async def _run_survey(self):
         """Execute the expanding circle survey pattern."""
@@ -112,6 +114,8 @@ class SurveillanceAgent:
 
         # Phase 1: Fly to target coordinates
         self.survey_state = "TRANSIT"
+        if self.stream_callback:
+            await self.stream_callback("agent_stream", {"agent_id": self.agent_id, "event": "survey_started", "content": self.target_coords})
         await self._tool_handlers["fly_to"](
             drone_id=self.drone_id, lat=center_lat, lon=center_lon, alt=cruise_alt
         )
@@ -143,6 +147,8 @@ class SurveillanceAgent:
 
                 if reading.get("status") == "ok":
                     logger.info("agent1_sensor_hit", radius=radius, point=point_idx, data=reading["data"])
+                    if self.stream_callback:
+                        await self.stream_callback("agent_stream", {"agent_id": self.agent_id, "event": "sensor_hit", "content": reading["data"]})
 
             # Check if we got consistent sensor data in this orbit
             hits = [r for r in orbit_readings if r.get("status") == "ok"]
@@ -190,6 +196,8 @@ class SurveillanceAgent:
                     logger.info("agent1_tool_call", tool=block.name, result=result)
                     if block.name == "report_classification":
                         self.classification_reported = True
+                        if self.stream_callback:
+                            await self.stream_callback("agent_stream", {"agent_id": self.agent_id, "event": "classified", "content": block.input})
 
     async def _wait_for_arrival(self, target_lat, target_lon, threshold_m=20.0):
         """Wait until drone is within threshold of target."""

@@ -1,0 +1,25 @@
+{
+  "name": "structural_collapse_test",
+  "markers": [
+    {
+      "id": "marker-sc-001",
+      "lat": 34.052,
+      "lon": -118.260,
+      "type": "structural_collapse",
+      "radius_m": 100.0,
+      "severity": "critical",
+      "confirmed": true
+    }
+  ],
+  "home_position": {
+    "lat": 34.045,
+    "lon": -118.270,
+    "alt": 0.0
+  },
+  "boundary_polygon": [
+    [34.051, -118.261],
+    [34.053, -118.261],
+    [34.053, -118.259],
+    [34.051, -118.259]
+  ]
+}
