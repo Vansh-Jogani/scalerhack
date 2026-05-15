@@ -27,3 +27,8 @@ Thumbs.db
 
 # Project
 *.db
+
+
+test.py
+test_cp4_movement.py
+frontend/package-lock.json
