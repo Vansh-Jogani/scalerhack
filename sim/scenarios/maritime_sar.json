@@ -1,0 +1,25 @@
+{
+  "name": "maritime_sar_test",
+  "markers": [
+    {
+      "id": "marker-ms-001",
+      "lat": 33.720,
+      "lon": -118.280,
+      "type": "maritime_sar",
+      "radius_m": 1000.0,
+      "severity": "high",
+      "confirmed": false
+    }
+  ],
+  "home_position": {
+    "lat": 33.740,
+    "lon": -118.260,
+    "alt": 0.0
+  },
+  "boundary_polygon": [
+    [33.711, -118.289],
+    [33.729, -118.289],
+    [33.729, -118.271],
+    [33.711, -118.271]
+  ]
+}
