@@ -1,0 +1,29 @@
+sim better
+
+1. Sensor realism (biggest bang for demo)
+  Right now sensor_overlay.py returns hardcoded values regardless of drone altitude, distance to incident, or time elapsed. Add
+  altitude-dependent degradation (thermal reading drops above 80m), distance falloff, and noise jitter so readings feel earned by the drone's
+   position.
+
+  2. Dynamic world events
+  The current world_event_task fires once after 30s and grows the fire radius by 50m. Replace it with a configurable event timeline in the
+  scenario JSON — fire spread rate, wind direction shifts, secondary ignitions — so each run feels different and agents have something real
+  to react to.
+
+  3. Wind model
+  Add a wind field to the scenario (speed, direction). Use it to:
+  - Bias fire spread direction in world events
+  - Have sensor_overlay return realistic wind sensor readings relative to drone heading
+  - In V2, agents can use it to pick upwind survey positions (the system prompt already mentions maintain_upwind_position)
+
+  4. Battery + RTL
+  Battery drains but nothing acts on it. Add a threshold (e.g. 20%) that triggers automatic RTL and broadcasts a battery_critical event the
+  agents can see.
+
+  5. Richer scenario file
+  Move the fire spread rate, event timeline, and wind into fire.json so you can swap scenarios without touching Python:
+  "wind": {"speed_ms": 3.5, "bearing_deg": 225},
+  "events": [
+    {"t_s": 30, "type": "fire_growth", "delta_radius_m": 50},
+    {"t_s": 90, "type": "fire_growth", "delta_radius_m": 80}
+  ]
