@@ -96,13 +96,17 @@ class BaseAgent(ABC):
         }
         self._conversation.append(user_msg)
 
-        response = await self.client.messages.create(
-            model=self.model,
-            max_tokens=2048,
-            system=self.system_prompt,
-            messages=self._conversation,
-            tools=self.tools,
-        )
+        try:
+            response = await self.client.messages.create(
+                model=self.model,
+                max_tokens=2048,
+                system=self.system_prompt,
+                messages=self._conversation,
+                tools=self.tools,
+            )
+        except Exception as api_err:
+            logger.error("anthropic_api_reason_error", error=str(api_err), type=str(type(api_err)), exc_info=True)
+            raise
 
         # Store assistant response in conversation history
         self._conversation.append({"role": "assistant", "content": response.content})
@@ -183,17 +187,21 @@ class BaseAgent(ABC):
             # If initial message provided, use it as first user message
             if initial_message:
                 self._conversation.append({"role": "user", "content": initial_message})
-                response = await self.client.messages.create(
-                    model=self.model,
-                    max_tokens=2048,
-                    system=self.system_prompt,
-                    messages=self._conversation,
-                    tools=self.tools,
-                )
-                self._conversation.append({"role": "assistant", "content": response.content})
+                try:
+                    response = await self.client.messages.create(
+                        model=self.model,
+                        max_tokens=2048,
+                        system=self.system_prompt,
+                        messages=self._conversation,
+                        tools=self.tools,
+                    )
+                    self._conversation.append({"role": "assistant", "content": response.content})
 
-                # Multi-turn tool use loop for initial message
-                await self._process_tool_loop(response)
+                    # Multi-turn tool use loop for initial message
+                    await self._process_tool_loop(response)
+                except Exception as api_err:
+                    logger.error("anthropic_api_error", error=str(api_err), type=str(type(api_err)), exc_info=True)
+                    raise
 
             # Main OODA-R loop
             while self._running:

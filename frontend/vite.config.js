@@ -11,7 +11,7 @@ export default defineConfig({
         ws: true,
       },
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8080',
       },
       '/health': {
         target: 'http://localhost:8080',

@@ -185,21 +185,35 @@ async def health():
 # ---------------------------------------------------------------------------
 
 class IncidentCreateRequest(BaseModel):
-    area: dict
-    disaster_type: str = "fire"
+    lat: float
+    lon: float
+    type: str = "fire"
+    severity: str = "medium"
+    zone_radius_m: float | None = None
+    zone_polygon: list | None = None
 
 
 @app.post("/api/incident/create")
 async def create_incident(request: IncidentCreateRequest):
     """Create a new incident from the admin panel.
 
-    This is the entry point for the GO signal when triggered via REST
-    instead of WebSocket.
+    Transforms the frontend's flat payload into the orchestrator's
+    expected format (area dict + disaster_type).
     """
-    payload = {
-        "area": request.area,
-        "disaster_type": request.disaster_type,
+    # Build area dict in the format orchestrator expects
+    area = {
+        "center": {"lat": request.lat, "lon": request.lon},
     }
+    if request.zone_polygon:
+        area["boundary_polygon"] = request.zone_polygon
+    if request.zone_radius_m:
+        area["radius_m"] = request.zone_radius_m
+
+    payload = {
+        "area": area,
+        "disaster_type": request.type,
+    }
+
     agent1_payload = await orchestrator.receive_go_signal(payload)
 
     # Schedule world event (fire growth after 90 seconds)
@@ -207,6 +221,8 @@ async def create_incident(request: IncidentCreateRequest):
 
     return {
         "status": "ok",
+        "incident_type": request.type,
+        "severity": request.severity,
         "agent1_payload": agent1_payload,
     }
 

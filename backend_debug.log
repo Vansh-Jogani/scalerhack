@@ -1,0 +1,2424 @@
+INFO:     Started server process [57358]
+INFO:     Waiting for application startup.
+[2m2026-05-15T20:49:54.259285Z[0m [1msystem_started                [0m [36mscenario[0m=[35msim/scenarios/fire.json[0m [36mtick_rate[0m=[35m10[0m
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+INFO:     127.0.0.1:64860 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64863 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64866 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64869 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:49:54.691603Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=64869)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:64872 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64875 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64878 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64881 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64884 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64901 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64904 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64907 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64910 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64913 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64916 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64919 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64922 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64925 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64928 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64931 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64934 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64937 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64940 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64943 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64946 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64949 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64952 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64955 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64958 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64961 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64964 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64967 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64970 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64973 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64976 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64979 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64982 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64985 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64988 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64991 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64994 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:64997 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65000 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65004 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65007 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65010 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65013 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65016 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65019 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65022 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65025 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65028 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65031 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65034 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65037 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65040 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65043 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65046 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65049 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65052 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65055 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65058 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65061 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65064 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65067 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65070 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65073 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65076 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65079 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65082 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65085 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65090 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65093 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65096 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:49:57.468385Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=65096)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:65099 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65102 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65105 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65108 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65111 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65114 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65117 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65120 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65123 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65126 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65129 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65132 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65135 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65138 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65141 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65144 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65147 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65150 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65153 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65156 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65159 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65162 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65165 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65168 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65171 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65174 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65177 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65180 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65183 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65186 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65189 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65192 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65195 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65198 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65201 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65204 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65207 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65210 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65213 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65216 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65220 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65223 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65226 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65229 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65232 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65235 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65238 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65241 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65244 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65247 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65250 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65253 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65256 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65259 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65262 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65265 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65268 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65271 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65274 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65277 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65280 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65283 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65286 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65289 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65292 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65295 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65298 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65301 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65304 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65307 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65310 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65313 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65316 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65319 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65322 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65325 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65328 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65331 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65334 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65337 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65340 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65343 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:00.547815Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=65343)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:65347 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     127.0.0.1:65349 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:00.789634Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=65349)"[0m
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:65352 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65355 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65358 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65361 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65364 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65367 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65370 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65373 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65376 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65379 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:01.212640Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=65379)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:65382 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65385 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65388 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65391 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65394 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65397 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65400 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65403 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65406 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65409 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65412 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65415 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65418 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65421 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:01.922066Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=65421)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:65424 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:01.950162Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=65424)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:65427 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65430 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65433 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65437 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:02.091401Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=65437)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:65439 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65442 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65445 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65448 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65451 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65454 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65459 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     127.0.0.1:65460 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:02.403422Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=65460)"[0m
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:65463 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65466 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:02.423090Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=65466)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:65469 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65472 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65475 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65478 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65481 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:02.488918Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=65481)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:65484 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65487 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65490 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65493 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65496 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65499 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65502 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65506 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65509 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65512 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65515 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65518 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65521 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:02.919324Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=65521)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:65524 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65527 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65530 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:65533 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:03.238282Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=65533)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49152 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:03.327099Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49152)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49156 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49159 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49162 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49165 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49168 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49171 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:03.590935Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49171)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49174 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:03.605720Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49174)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49177 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49180 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:03.750123Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49180)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49183 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49186 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49189 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49192 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49195 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49198 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49201 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49204 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49207 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:04.014176Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49207)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49210 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49213 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49216 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:04.116368Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49216)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49219 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49222 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49225 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49228 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49231 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49234 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49237 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49241 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49244 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49247 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:04.498711Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49247)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49252 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:04.517853Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49252)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49253 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49256 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49259 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49262 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49265 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49269 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49272 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49277 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49280 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:04.917103Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49280)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49283 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49286 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49289 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49292 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49295 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49298 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:05.062101Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49298)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49301 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49304 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49307 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49310 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49313 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49316 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49319 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49322 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49325 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49328 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49331 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49334 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49337 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49340 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49343 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:05.633346Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49343)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49346 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49349 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49353 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49356 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49359 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49362 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49365 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49368 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49371 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49374 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49377 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49380 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49383 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49386 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49389 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:06.066326Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49389)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49392 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:06.173874Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49392)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49395 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49398 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49401 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49404 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49407 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49410 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49416 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49419 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:06.432773Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49419)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49422 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49425 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49428 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:06.707227Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49428)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49431 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49434 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49438 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49441 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49444 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49447 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49450 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49455 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     127.0.0.1:49456 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:07.091622Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49456)"[0m
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:49460 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     127.0.0.1:49462 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:07.133326Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49462)"[0m
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:49465 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49468 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49471 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49474 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:07.340039Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49474)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49477 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:07.355986Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49477)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49480 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49483 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49486 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:07.515503Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49486)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49489 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49492 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49495 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:07.617481Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49495)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49498 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49501 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49504 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:07.727684Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49504)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49507 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:07.744409Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49507)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49510 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49513 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49516 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:07.922210Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49516)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49519 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49522 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49525 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49528 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:08.057346Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49528)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49531 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49534 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:08.183797Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49534)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49537 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49540 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49543 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49546 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49549 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:08.302985Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49549)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49552 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49555 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:08.367619Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49555)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49558 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49561 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49564 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49567 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49570 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:08.605752Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49570)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49573 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49576 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49579 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:08.852859Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49579)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49582 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:08.870102Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49582)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49585 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49588 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49591 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49594 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49597 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49600 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49603 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49606 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:09.176899Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49606)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49609 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49612 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:09.202457Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49612)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49615 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:09.305848Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49615)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49618 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49621 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49624 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49627 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49630 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49633 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49636 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49639 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49642 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:09.675951Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49642)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49645 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49648 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:09.732509Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49648)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49651 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:09.811629Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49651)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49654 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49657 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49660 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:10.038730Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49660)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49663 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49666 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49669 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:10.157832Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49669)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49672 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49675 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49678 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49681 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:10.327405Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49681)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49685 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49688 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:10.612066Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49688)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49691 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49694 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:10.707030Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49694)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49697 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49700 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:10.902970Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49700)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49703 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49706 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49709 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49712 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49715 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49718 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49721 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:11.167285Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49721)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49724 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:11.181773Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49724)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49727 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49730 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49733 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49736 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:11.358402Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49736)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49739 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49742 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:11.372701Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49742)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49745 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:11.425318Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49745)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49748 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49751 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49754 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49757 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:11.522604Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49757)"[0m
+INFO:     connection open
+[2m2026-05-15T20:50:11.554064Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:49760 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:11.584007Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49760)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49763 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:11.616711Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49763)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49766 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:11.630025Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49766)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49769 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49772 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:11.665202Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49772)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49775 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:11.679850Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49775)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49778 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:11.707904Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49778)"[0m
+INFO:     connection open
+[2m2026-05-15T20:50:11.760731Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:49782 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     127.0.0.1:49784 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:11.762108Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49784)"[0m
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:49787 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:11.873829Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49787)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49790 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49793 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:11.969469Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:49796 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:11.976649Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49796)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49799 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49802 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:12.083492Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49802)"[0m
+INFO:     connection open
+[2m2026-05-15T20:50:12.174961Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:49807 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:12.177529Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49807)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49810 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49813 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49816 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49819 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49822 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49826 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     127.0.0.1:49828 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:12.274172Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49828)"[0m
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:49831 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:12.288821Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49831)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49834 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49837 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:12.380408Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:49840 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:12.384596Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49840)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49843 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     127.0.0.1:49846 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:12.620532Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49846)"[0m
+INFO:     connection closed
+INFO:     connection open
+INFO:     127.0.0.1:49849 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:12.670888Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:49852 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:12.683303Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49852)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49855 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49858 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49861 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49864 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49867 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:12.777687Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49867)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49870 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49873 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49876 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49879 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:12.878212Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:49882 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:12.879778Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49882)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49885 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49888 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49891 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:12.916510Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49891)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49894 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49897 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49900 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:12.986142Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49900)"[0m
+INFO:     connection open
+[2m2026-05-15T20:50:13.087543Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:49903 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:13.089116Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49903)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49906 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49909 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49912 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:13.192805Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49912)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49915 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49918 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49921 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:13.306409Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:49924 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:13.307858Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49924)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49927 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:13.342810Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49927)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49931 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     127.0.0.1:49933 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:13.410655Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49933)"[0m
+INFO:     connection closed
+INFO:     connection open
+INFO:     127.0.0.1:49936 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49939 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49942 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49945 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:13.508090Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:49948 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:13.510119Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49948)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49951 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49954 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49957 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49960 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49963 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:13.613243Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49963)"[0m
+INFO:     connection open
+[2m2026-05-15T20:50:13.821733Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:49967 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     127.0.0.1:49969 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:13.823318Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49969)"[0m
+INFO:     connection open
+INFO:     connection closed
+[2m2026-05-15T20:50:13.840215Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:49973 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:13.867685Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49973)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49975 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49978 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:13.889713Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49978)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49981 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49984 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49987 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:13.922627Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49987)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:49990 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49993 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:49996 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:14.134481Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:49999 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:14.136688Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=49999)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50002 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50005 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:14.157060Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50005)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50008 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50011 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50014 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50017 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50020 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:14.238531Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50020)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50023 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50026 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:14.342596Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50030 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:14.342922Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50030)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50032 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50035 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50038 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50041 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50044 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50047 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:14.448907Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50047)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50050 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50053 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:14.553843Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50056 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:14.555333Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50056)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50059 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50063 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:14.656674Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50063)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50065 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:14.766592Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50068 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:14.772763Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50068)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50071 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50074 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50077 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:14.818982Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50077)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50081 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:14.866702Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50086 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:14.868250Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50086)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50087 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50090 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50093 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:14.987770Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50093)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50096 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:15.025107Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50096)"[0m
+INFO:     connection open
+[2m2026-05-15T20:50:15.029311Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50099 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50102 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:15.074705Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50102)"[0m
+INFO:     connection open
+[2m2026-05-15T20:50:15.178395Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50107 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:15.179762Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50107)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50108 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50111 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:15.285406Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50111)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50114 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:15.388222Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50117 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:15.389737Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50117)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50120 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:15.496488Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50120)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50123 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:15.595919Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50126 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:15.598064Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50126)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50129 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:15.703029Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50129)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50132 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50135 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:15.803647Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50135)"[0m
+INFO:     connection open
+[2m2026-05-15T20:50:15.804762Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50138 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:15.907303Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50138)"[0m
+INFO:     connection open
+[2m2026-05-15T20:50:16.009015Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50143 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     127.0.0.1:50145 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:16.010229Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50145)"[0m
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:50148 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50151 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50154 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50157 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:16.116670Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50157)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50160 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:16.213960Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50164 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:16.222192Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50164)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50167 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:16.324986Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50167)"[0m
+INFO:     connection open
+[2m2026-05-15T20:50:16.427450Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50171 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50173 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:16.430125Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50173)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50176 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50180 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:16.535698Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50180)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50182 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50185 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:16.638770Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50188 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:16.644398Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50188)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50191 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50194 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50197 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:16.740924Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50197)"[0m
+INFO:     connection open
+[2m2026-05-15T20:50:16.843739Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50205 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:16.845295Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50205)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50208 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50214 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     127.0.0.1:50215 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:17.127096Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50215)"[0m
+INFO:     connection open
+INFO:     connection closed
+[2m2026-05-15T20:50:17.167532Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50222 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:17.170690Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50222)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50223 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50226 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50229 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:17.230389Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50229)"[0m
+INFO:     connection open
+[2m2026-05-15T20:50:17.333228Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50232 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:17.337625Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50232)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50235 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50238 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50241 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50244 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:17.440704Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50244)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50247 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50250 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:17.543401Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50253 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:17.546182Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50253)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50256 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50260 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     127.0.0.1:50262 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:17.654134Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50262)"[0m
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:50265 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50268 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50271 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50275 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+[2m2026-05-15T20:50:17.755227Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50277 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:17.755593Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50277)"[0m
+INFO:     connection closed
+INFO:     connection open
+INFO:     127.0.0.1:50280 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50283 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:17.858983Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50283)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50286 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50289 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:17.961091Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50292 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:17.962932Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50292)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50295 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50298 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50301 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:18.075668Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50301)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50304 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50307 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:18.172188Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50307)"[0m
+INFO:     connection open
+[2m2026-05-15T20:50:18.173239Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50310 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50313 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50316 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50319 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50322 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:18.276965Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50322)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50325 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:18.382851Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50328 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:18.384108Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50328)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50331 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50336 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     127.0.0.1:50337 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:18.493900Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50337)"[0m
+INFO:     connection open
+INFO:     connection closed
+[2m2026-05-15T20:50:18.588333Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50340 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:18.590602Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50340)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50345 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:18.694210Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50345)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50346 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50349 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50352 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:18.800137Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50355 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:18.800923Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50355)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50358 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50361 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50366 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:18.936341Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50366)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50368 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50371 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50374 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50377 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50380 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:19.006528Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50380)"[0m
+INFO:     connection open
+[2m2026-05-15T20:50:19.007905Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50383 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:19.117026Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50383)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50386 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50389 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50392 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:19.222482Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50395 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:19.224240Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50395)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50398 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50401 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50404 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50407 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:19.326231Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50407)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50410 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50413 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50416 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:19.430289Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50419 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:19.432363Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50419)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50422 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:19.536882Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50422)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50426 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     127.0.0.1:50428 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:19.641356Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50428)"[0m
+INFO:     connection open
+INFO:     connection closed
+[2m2026-05-15T20:50:19.642700Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50431 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50434 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50437 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50440 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:19.747787Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50440)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50443 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50446 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50449 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50452 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:19.853222Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50455 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:19.854505Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50455)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50458 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50461 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:19.954371Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50461)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50464 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50467 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:20.058683Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50470 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:20.059499Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50470)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50473 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50477 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     127.0.0.1:50479 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:20.168893Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50479)"[0m
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:50482 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50485 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50488 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50491 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:20.471058Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50494 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:20.507713Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50494)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50497 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50501 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:20.532846Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50501)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50503 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50506 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50509 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50512 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50515 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:20.637935Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50518 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:20.638795Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50518)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50521 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50524 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50527 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50530 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50533 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50536 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:20.737864Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50536)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50539 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:20.842517Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50543 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     127.0.0.1:50545 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:20.843460Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50545)"[0m
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:50548 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50551 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50554 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50558 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     127.0.0.1:50560 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:20.995189Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50560)"[0m
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:50563 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:21.059017Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50567 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:21.060615Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50567)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50570 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50573 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50578 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:21.168573Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50578)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50579 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:21.273298Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50582 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:21.274244Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50582)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50585 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:21.376152Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50585)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50588 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50591 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+[2m2026-05-15T20:50:21.493118Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     127.0.0.1:50594 - "WebSocket /ws" [accepted]
+[2m2026-05-15T20:50:21.497250Z[0m [1mws_connected                  [0m [36mclient[0m=[35m"Address(host='127.0.0.1', port=50594)"[0m
+INFO:     connection open
+INFO:     127.0.0.1:50597 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50600 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     127.0.0.1:50603 - "WebSocket /ws/agents" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     Shutting down
+[2m2026-05-15T20:50:21.610863Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.610959Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611001Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611034Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611065Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611366Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611403Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611430Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611462Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611490Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611517Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611542Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611565Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611596Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611621Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611645Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611669Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611692Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611718Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611744Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611774Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611815Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611841Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611864Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611891Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611917Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611943Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.611969Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.612016Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.612055Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.612082Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.613408Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.613548Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.613587Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.613620Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.613661Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.613694Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.613722Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.613753Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.613784Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.613812Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.613840Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.613868Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.614016Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.614159Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.614247Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.614567Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.614618Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.614646Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.614673Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.614699Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.614726Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.614754Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.614780Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.614804Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.614829Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.614874Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.614905Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.614933Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.614956Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.614983Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.615009Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.615046Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.615314Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.615572Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.615685Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.615787Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.615940Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.616069Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.616176Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.616279Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.616408Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.616529Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.616623Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.616727Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.616849Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.616933Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.617158Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.617264Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.617346Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.617449Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.617538Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.617642Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.617728Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.617815Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.617902Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.617993Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.618164Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.618255Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.618325Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.618358Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.618602Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.618643Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.618673Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.619856Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.620136Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.620172Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.620197Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.620224Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.620248Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.620274Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.620299Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.620324Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.620352Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.620375Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.620507Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.620648Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.620731Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.620853Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.620929Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.621003Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.621082Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.621156Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.621229Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.621302Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.621378Z[0m [1mws_disconnected               [0m
+[2m2026-05-15T20:50:21.621453Z[0m [1mws_disconnected               [0m
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [57358]

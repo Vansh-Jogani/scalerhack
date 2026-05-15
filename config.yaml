@@ -10,6 +10,6 @@ simulation:
   scenario: "sim/scenarios/fire.json"
 
 models:
-  agent1: "claude-sonnet-4-20250514"
-  agent2: "claude-sonnet-4-20250514"
-  agent3: "claude-sonnet-4-20250514"
+  agent1: "claude-sonnet-4-6"
+  agent2: "claude-sonnet-4-6"
+  agent3: "claude-sonnet-4-6"
