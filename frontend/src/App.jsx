@@ -12,15 +12,10 @@ function App() {
   const ws = useRef(null)
 
   useEffect(() => {
-    const socket = new WebSocket(`ws://${window.location.host}/ws`)
+    const wsUrl = `ws://${window.location.hostname}:8080/ws`
+    const socket = new WebSocket(wsUrl)
     ws.current = socket
-    socket.onopen = () => console.log('[ARIA] WS connected to', socket.url)
-    socket.onerror = (e) => console.error('[ARIA] WS error', e)
-    socket.onclose = (e) => console.warn('[ARIA] WS closed', e.code, e.reason)
-    let msgCount = 0
     socket.onmessage = (event) => {
-      msgCount++
-      if (msgCount <= 3 || msgCount % 50 === 0) console.log('[ARIA] msg #' + msgCount, event.data.slice(0, 80))
       const msg = JSON.parse(event.data)
       if (msg.type === 'telemetry') {
         setDroneData((prev) => ({ ...prev, [msg.data.drone_id]: msg.data }))

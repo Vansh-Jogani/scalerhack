@@ -3,7 +3,6 @@ import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN
-console.log('[ARIA] token:', import.meta.env.VITE_MAPBOX_TOKEN ? import.meta.env.VITE_MAPBOX_TOKEN.slice(0, 15) + '…' : 'MISSING')
 
 function Map({ drones, markers }) {
   const mapContainer = useRef(null)
@@ -21,11 +20,7 @@ function Map({ drones, markers }) {
       center: [-118.2437, 34.0522],
       zoom: 13,
     })
-    map.current.on('load', () => {
-      console.log('[ARIA] Map loaded ✓')
-      setMapReady(true)
-    })
-    map.current.on('error', (e) => console.error('[ARIA] Map error:', e))
+    map.current.on('load', () => setMapReady(true))
     return () => {
       map.current?.remove()
       map.current = null
@@ -35,7 +30,6 @@ function Map({ drones, markers }) {
   // Add/update drone icons — only once map style is ready
   useEffect(() => {
     if (!mapReady) return
-    console.log('[ARIA] drones effect, count:', Object.keys(drones).length)
     Object.entries(drones).forEach(([id, data]) => {
       animationTargets.current[id] = { lat: data.lat, lon: data.lon, heading: data.heading }
       if (droneMarkers.current[id]) return
@@ -61,10 +55,13 @@ function Map({ drones, markers }) {
         const target = animationTargets.current[id]
         if (!target) return
         const cur = marker.getLngLat()
-        marker.setLngLat([
-          cur.lng + (target.lon - cur.lng) * 0.1,
-          cur.lat + (target.lat - cur.lat) * 0.1,
-        ])
+        const dLng = target.lon - cur.lng
+        const dLat = target.lat - cur.lat
+        if (Math.abs(dLng) < 0.00001 && Math.abs(dLat) < 0.00001) {
+          marker.setLngLat([target.lon, target.lat])
+        } else {
+          marker.setLngLat([cur.lng + dLng * 0.1, cur.lat + dLat * 0.1])
+        }
         const arrow = marker.getElement().querySelector('.drone-arrow')
         if (arrow) arrow.style.transform = `rotate(${target.heading || 0}deg)`
       })
@@ -77,7 +74,6 @@ function Map({ drones, markers }) {
   // Add disaster markers — only once map style is ready
   useEffect(() => {
     if (!mapReady) return
-    console.log('[ARIA] markers effect, count:', markers.length)
     markers.forEach((m) => {
       if (markerLayers.current[m.id]) return
       const el = document.createElement('div')
