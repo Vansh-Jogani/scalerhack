@@ -221,12 +221,14 @@ class SpecialistAgent:
         else:
             drone_type = "rotary"
 
-        # Spawn swarm drones
+        # Spawn swarm drones at a staging point ~1km north of incident
         num_drones = self.swarm_config["drones"]
+        staging_lat = center_lat + 0.009  # ~1 km north
+        staging_lon = center_lon
         for i in range(num_drones):
             drone_id = f"swarm-{self.agent_id}-{i}"
-            spawn_lat = center_lat + (i * 0.0005)
-            self.world_state.add_drone(drone_id, drone_type, spawn_lat, center_lon)
+            offset_lon = staging_lon + (i - num_drones // 2) * 0.0008
+            self.world_state.add_drone(drone_id, drone_type, staging_lat, offset_lon)
             self.drone_ids.append(drone_id)
             self._readings[drone_id] = []
             logger.info("swarm_drone_spawned", drone_id=drone_id, type=drone_type)

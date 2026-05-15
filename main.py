@@ -123,6 +123,7 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     connected_clients.append(websocket)
     logger.info("ws_connected", client=str(websocket.client))
+    await websocket.send_json({"type": "hello", "status": "connected", "drones": len(world_state.drones), "markers": len(world_state.markers)})
     try:
         while True:
             data = await websocket.receive_text()
@@ -147,4 +148,4 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host=config["server"]["host"], port=config["server"]["port"], reload=True)
+    uvicorn.run("main:app", host=config["server"]["host"], port=config["server"]["port"], reload=False)

@@ -10,7 +10,6 @@ import DispatchAnimation, { findNearestCentre } from './DispatchAnimation.js'
 export { responseCentres }
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN
-console.log('[ARIA] token:', import.meta.env.VITE_MAPBOX_TOKEN ? import.meta.env.VITE_MAPBOX_TOKEN.slice(0, 15) + '…' : 'MISSING')
 
 const MAP_CENTER = [78.4867, 17.3850]
 const MAP_ZOOM = 12
@@ -127,11 +126,7 @@ function Map({ isSelectingLocation, onLocationSelect, incidents, systemStatus })
       center: [-118.2437, 34.0522],
       zoom: 13,
     })
-    map.current.on('load', () => {
-      console.log('[ARIA] Map loaded ✓')
-      setMapReady(true)
-    })
-    map.current.on('error', (e) => console.error('[ARIA] Map error:', e))
+    map.current.on('load', () => setMapReady(true))
     return () => {
       map.current?.remove()
       map.current = null
