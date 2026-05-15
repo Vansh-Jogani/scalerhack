@@ -6,6 +6,31 @@
 
 ---
 
+## [2026-05-16 03:02] — Integration Phase 1 Complete: Package files dropped in
+**Stage:** Stage 1 (in progress) — Integration Phase 1
+**State:** working — clean boot
+**What got done:**
+- Reset broken `vjonzao` state to clean `master` to ensure baseline assumptions are met.
+- Copied `prompts/`, `messages.py`, `schemas.py`, and `event_bus.py` into the tree.
+- Copied tests and updated `conftest.py` with `sys.path.insert`.
+- Ran full test suite (138/138 passed).
+- Verified `python main.py` boots cleanly without errors.
+**What's next:**
+- Phase 2: Migrate prompts to registry.
+**Blockers / open questions:**
+- none
+
+---
+
+## [2026-05-16 03:00] — Integration Phase 0 Complete: Pre-flight
+**Stage:** Stage 1 (in progress) — Integration Phase 0
+**State:** working
+**What got done:**
+- Confirmed Stage 1 smoke test passes with current code (baseline before changes).
+- Verified package deliverables.
+- Verified no meaningful drift in prompts.
+- Package tests pass standalone.
+
 ## [2026-05-15 22:40] — Stage 1 test suite created, 61/61 passing
 **Stage:** Stage 1 (in progress)
 **State:** working

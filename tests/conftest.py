@@ -33,3 +33,7 @@ def world_with_scenario():
 @pytest.fixture
 def sensor():
     return SensorOverlay()
+
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
