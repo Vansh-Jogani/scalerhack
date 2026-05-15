@@ -6,6 +6,74 @@
 
 ---
 
+## [2026-05-16 00:05] — Prompt registry + typed comms layer complete (4 deliverables)
+**Stage:** Stage 1 (in progress) — pre-Stage 2 infrastructure
+**State:** working — all smoke tests passing
+**What got done:**
+
+**D1 — Prompt Registry**
+- `prompts/registry.py`: load_prompt(name) returns {text, version_hash (8-char SHA-256)}
+- Include resolution: `{{include: _shared/file.md}}` resolved at load time, not at runtime
+- `fill_template()` for runtime `{{variable}}` substitution (Agent 2 swarm config)
+- Cache-on-first-load; reload=True override for dev
+- `prompts/agent1_surveillance.md`, `agent2_specialist.md`, `agent3_advisory.md` — all prompts in markdown, none inline in .py
+- `prompts/_shared/safety_rules.md`, `output_contracts.md`, `notes.md`
+- `notes.md` carries maritime_sar TODO for Stage 5 Agent 2 override
+
+**D2 — Tool Schemas**
+- `agents/tools/schemas.py`: Pydantic ToolInput base with to_claude_tool_dict() + validate_call()
+- Agent 1: fly_to, loiter_over, get_sensor_reading, report_classification, request_detailed_pass
+- Agent 2: deploy_swarm (batch, positions=[]), get_sensor_reading, update_zone_classification, mark_survivor, mark_hazard, report_swarm_findings
+- Agent 3: issue_advisory (tool-use enforcement, not prompt-only JSON)
+- AGENT_1_TOOLS, AGENT_2_TOOLS, AGENT_3_TOOLS lists exported for direct use
+- Alt floor enforced: fly_to rejects alt < 60m at schema boundary
+
+**D3 — Handoff Payload Schemas**
+- `agents/messages.py`: SurveillanceReport, SwarmFindings, IncidentBriefing, WorldEvent
+- All carry: incident_id, timestamp, agent_version, prompt_version_hash
+- IncidentBriefing carries previous_advisory for Agent 3 update-not-restart semantics
+- Round-trip serialization tested: model → JSON → model equality confirmed
+- Validation rejection tested: confidence > 1.0 rejected at model boundary
+
+**D4 — Event Bus**
+- `orchestrator/event_bus.py`: async pub-sub, 500ms coalesce window (tunable)
+- Coalescing confirmed: 3 events → 2 dispatches (one per type, latest payload wins)
+- Heartbeat: fires heartbeat_check if no event in 60s — not a hard clock, resets on publish
+
+**Agent 3 migration**
+- Removed Ollama (httpx) entirely — now Claude API with tool_choice={"type":"tool","name":"issue_advisory"}
+- Schema enforced at API boundary, not via prompt-only JSON instruction
+
+**What's next:**
+- Checkpoint 4: frontend drone icon moving on Mapbox (needs browser + token)
+- Checkpoint 5: live Agent 1 API call (Anthropic key required)
+- Wire EventBus into orchestrator.py (orchestrator.receive_agent1_report → bus.publish)
+**Blockers / open questions:**
+- Mapbox token for frontend checkpoint 4
+- EventBus not yet wired into orchestrator.py — orchestrator still calls agent3 directly
+**Files touched:**
+- prompts/__init__.py (new)
+- prompts/registry.py (new)
+- prompts/agent1_surveillance.md (new)
+- prompts/agent2_specialist.md (new)
+- prompts/agent3_advisory.md (new)
+- prompts/_shared/safety_rules.md (new)
+- prompts/_shared/output_contracts.md (new)
+- prompts/_shared/notes.md (new)
+- agents/tools/schemas.py (new)
+- agents/messages.py (new)
+- orchestrator/event_bus.py (new)
+- agents/agent1_surveillance.py (inline prompt removed, registry wired)
+- agents/agent2_specialist.py (inline prompt removed, receive_dispatch + _run_mission added, AGENT_2_TOOLS wired)
+- agents/agent3_advisory.py (Ollama removed, Claude API + tool use, registry wired)
+**Notes for next session:**
+- Agent 2 _run_mission() now has a full multi-turn tool loop — previously was a skeleton
+- Agent isolation is enforced: Agent 2 receives SurveillanceReport (typed), not Agent 1 messages array
+- Agent 3 receives IncidentBriefing (typed), not Agent 1 or 2 messages arrays
+- prompt_version_hash logged with every LLM call for behavioral correlation
+
+---
+
 ## [2026-05-15 22:40] — Stage 1 test suite created, 61/61 passing
 **Stage:** Stage 1 (in progress)
 **State:** working

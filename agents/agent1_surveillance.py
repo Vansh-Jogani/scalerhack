@@ -9,38 +9,18 @@ import math
 import structlog
 from anthropic import AsyncAnthropic
 
-from agents.tools.flight_tools import FLY_TO_TOOL, create_fly_to_handler
-from agents.tools.sensor_tools import GET_SENSOR_READING_TOOL, create_get_sensor_reading_handler
-from agents.tools.report_tools import REPORT_CLASSIFICATION_TOOL, create_report_classification_handler
+from prompts import load_prompt
+from agents.tools.schemas import (
+    AGENT_1_TOOLS,
+    FlyToInput,
+    GetSensorReadingInput,
+    ReportClassificationInput,
+)
+from agents.tools.flight_tools import create_fly_to_handler
+from agents.tools.sensor_tools import create_get_sensor_reading_handler
+from agents.tools.report_tools import create_report_classification_handler
 
 logger = structlog.get_logger()
-
-AGENT_1_SYSTEM_PROMPT = """You are ARIA Surveillance Agent. You control a fixed-wing reconnaissance drone.
-
-You receive: Go signal with approximate coordinates.
-You do NOT know the disaster type — you must classify from sensor data.
-
-Your mission:
-1. Fly to provided coordinates
-2. Begin expanding circle survey: radius 50m, then 100m, then 150m
-3. At each orbit, call get_sensor_reading()
-4. If sensor returns data → area found, continue orbiting at that radius
-5. Once full orbit complete with consistent sensor data → classify
-6. Call report_classification() with your findings
-7. Remain in loiter at confirmed radius
-
-Your drone:
-- Speed: 18 m/s cruise, 80m loiter radius
-- Altitude: 120m AGL for survey, 60m for detailed pass
-- You control 1 aircraft
-
-Rules:
-- Complete one full orbit before reporting classification
-- Always report confidence level with classification
-- Never descend below 60m AGL
-
-Available tools: fly_to, get_sensor_reading, report_classification
-"""
 
 SURVEY_RADII = [50.0, 100.0, 150.0]
 ORBIT_POINTS = 8
@@ -78,7 +58,8 @@ class SurveillanceAgent:
         self.client = AsyncAnthropic()
         self._running = False
 
-        self.tools = [FLY_TO_TOOL, GET_SENSOR_READING_TOOL, REPORT_CLASSIFICATION_TOOL]
+        self._prompt = load_prompt("agent1_surveillance")
+
         self._tool_handlers = {
             "fly_to": create_fly_to_handler(world_state),
             "get_sensor_reading": create_get_sensor_reading_handler(sensor_overlay, world_state),
@@ -110,17 +91,13 @@ class SurveillanceAgent:
         center_lon = self.target_coords["lon"]
         cruise_alt = 120.0
 
-        # Phase 1: Fly to target coordinates
         self.survey_state = "TRANSIT"
         await self._tool_handlers["fly_to"](
             drone_id=self.drone_id, lat=center_lat, lon=center_lon, alt=cruise_alt
         )
         logger.info("agent1_transit_started", target=self.target_coords)
-
-        # Wait for arrival
         await self._wait_for_arrival(center_lat, center_lon)
 
-        # Phase 2: Expanding circle survey
         self.survey_state = "SURVEYING"
         for radius_idx, radius in enumerate(SURVEY_RADII):
             self.current_radius_idx = radius_idx
@@ -144,18 +121,14 @@ class SurveillanceAgent:
                 if reading.get("status") == "ok":
                     logger.info("agent1_sensor_hit", radius=radius, point=point_idx, data=reading["data"])
 
-            # Check if we got consistent sensor data in this orbit
             hits = [r for r in orbit_readings if r.get("status") == "ok"]
             if hits:
                 self.sensor_readings = hits
                 logger.info("agent1_area_confirmed", radius=radius, hits=len(hits))
-                # Area found — classify using LLM
                 await self._classify(center_lat, center_lon, radius, hits)
-                # Remain in loiter
                 self.survey_state = "LOITERING"
                 return
 
-        # No hits at any radius
         logger.warning("agent1_no_sensor_data", radii_tried=SURVEY_RADII)
         self.survey_state = "COMPLETE_NO_DATA"
 
@@ -171,19 +144,35 @@ class SurveillanceAgent:
         }
 
         messages = [
-            {"role": "user", "content": f"Survey complete. Classify this incident from sensor data:\n{observations}"}
+            {
+                "role": "user",
+                "content": (
+                    f"Survey complete. Classify this incident from sensor data:\n\n"
+                    f"{observations}"
+                ),
+            }
         ]
 
         response = await self.client.messages.create(
             model=self.model,
             max_tokens=1024,
-            system=AGENT_1_SYSTEM_PROMPT,
+            system=self._prompt["text"],
             messages=messages,
-            tools=self.tools,
+            tools=AGENT_1_TOOLS,
+        )
+
+        logger.info(
+            "agent1_classify_called",
+            prompt_version=self._prompt["version_hash"],
+            stop_reason=response.stop_reason,
         )
 
         for block in response.content:
             if block.type == "tool_use":
+                _, err = ReportClassificationInput.validate_call(block.input)
+                if err:
+                    logger.error("agent1_invalid_tool_call", tool=block.name, error=err)
+                    continue
                 handler = self._tool_handlers.get(block.name)
                 if handler:
                     result = await handler(**block.input)
@@ -192,7 +181,6 @@ class SurveillanceAgent:
                         self.classification_reported = True
 
     async def _wait_for_arrival(self, target_lat, target_lon, threshold_m=20.0):
-        """Wait until drone is within threshold of target."""
         while self._running:
             telemetry = self.world_state.get_drone_telemetry(self.drone_id)
             if telemetry is None:
@@ -208,9 +196,9 @@ class SurveillanceAgent:
 
 
 def _haversine(lat1, lon1, lat2, lon2):
-    """Distance in meters between two points."""
     R = 6_371_000.0
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
-    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
-    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    a = (math.sin(dlat / 2) ** 2
+         + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2)
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))

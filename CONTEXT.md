@@ -17,8 +17,8 @@ Multi-agent autonomous drone swarm simulation for disaster response — three Cl
 ## Current stage
 
 **Stage:** Stage 1 — Foundation (in progress)
-**Last verified working:** Checkpoints 1-3 (FastAPI, WebSocket, markers, telemetry broadcast), Agent architecture (Changes 1-6)
-**Next concrete task:** Full integration test — drone movement under tick loop, frontend verification, Checkpoints 4-6
+**Last verified working:** Checkpoints 1-3 + all prompt/comms infrastructure (D1-D4 smoke tests green)
+**Next concrete task:** Checkpoint 4 (frontend drone icon on Mapbox) and Checkpoint 5 (live Agent 1 API call)
 
 Update this block after every session.
 
@@ -59,6 +59,12 @@ Format: `YYYY-MM-DD — decision — rationale`
 - 2026-05-15 — GO signal flow: operator sends full context (area+polygon+disaster_type), orchestrator strips to coordinates-only for Agent 1 — per CHANGE 1 spec
 - 2026-05-15 — Sensor overlay uses ray-casting point-in-polygon (not distance-to-center) — per CHANGE 3 spec
 - 2026-05-15 — Agent 1 survey pattern: expanding circles at 50m, 100m, 150m with 8 orbit points each — per CHANGE 2 spec
+- 2026-05-16 — All agent prompts in prompts/*.md (never inline in .py); registry resolves {{include:}} at load time, {{variable}} at runtime via fill_template()
+- 2026-05-16 — Agent 3 migrated from Ollama to Claude API; advisory schema enforced via tool_choice={"type":"tool","name":"issue_advisory"}, not prompt-only JSON
+- 2026-05-16 — Agent 2 swarm control: batch deploy_swarm(positions=[]) not per-drone fly_to; Agent 2 has full multi-turn tool loop now
+- 2026-05-16 — Handoff isolation: Agent 2 receives SurveillanceReport (typed Pydantic), never Agent 1's messages array; Agent 3 receives IncidentBriefing, never Agent 1 or 2 messages arrays
+- 2026-05-16 — EventBus coalesce window: 500ms (tunable in constructor); heartbeat: 60s if no event; last-event-per-type wins on coalesce
+- 2026-05-16 — maritime_sar Agent 2 override deferred to Stage 5 — flagged in prompts/_shared/notes.md
 
 ---
 
@@ -87,6 +93,32 @@ Format: `YYYY-MM-DD — symptom — root cause — fix`
 
 ---
 
+## Prompt registry conventions
+
+- All agent prompts live in `prompts/<name>.md`. Never inline in .py files.
+- `{{include: _shared/file.md}}` — resolved at load time by registry. Shared rules/contracts go in `prompts/_shared/`.
+- `{{variable}}` — resolved at runtime by `fill_template()`. Used for Agent 2 swarm config vars.
+- `load_prompt(name)` returns `{"text": str, "version_hash": str}`. Log version_hash with every LLM call.
+- Cache is warm on first load per process. Use `reload=True` for dev hot-reload.
+
+## Handoff message conventions
+
+- `agents/messages.py` is the single source of truth for all inter-agent payloads.
+- Agent 1 → Orchestrator: `SurveillanceReport` (Pydantic). Orchestrator validates at boundary.
+- Orchestrator → Agent 2: orchestrator passes SurveillanceReport; Agent 2 receives it typed.
+- Agent 2 → Orchestrator: `SwarmFindings` (Pydantic). Orchestrator validates at boundary.
+- Orchestrator → Agent 3: `IncidentBriefing` (carries both reports + previous_advisory).
+- World → Agent 3 bus: `WorldEvent`.
+- Agents never share messages arrays or tool-call histories — only typed report objects.
+
+## Event bus conventions
+
+- `orchestrator/event_bus.py` — pub-sub with coalescing.
+- Coalesce window: 500ms (constructor arg). Last event per type wins.
+- Heartbeat: 60s if no event fires (resets on every publish).
+- `bus.subscribe(event_type, handler)` — handler must be an async coroutine.
+- EventBus is NOT yet wired into orchestrator.py — orchestrator still calls agent3 directly. Wire in Stage 2.
+
 ## Key files at a glance
 
 - `SPEC.md` — the build spec (read-only)
@@ -96,4 +128,8 @@ Format: `YYYY-MM-DD — symptom — root cause — fix`
 - `config.yaml` — ports, model names, scenario paths (Stage 1+)
 - `sim/drone_interface.py` — the V1→V2 seam
 - `orchestrator/orchestrator.py` — LangGraph state machine
+- `orchestrator/event_bus.py` — Agent 3 trigger bus
 - `sim_layer/map_state_manager.py` — single Mapbox writer
+- `prompts/` — all agent system prompts (markdown)
+- `agents/tools/schemas.py` — all tool schemas as Pydantic models
+- `agents/messages.py` — all inter-agent message types

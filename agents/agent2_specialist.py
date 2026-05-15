@@ -1,15 +1,26 @@
 """Agent 2 — Specialist Swarm Agent.
 
-Deploys specialist swarm based on swarm config selected by orchestrator.
-Reports zone assessments, survivor detections, and hazard maps.
+Receives a SurveillanceReport from orchestrator. Deploys the correct swarm
+type (selected by orchestrator via SWARM_CAPABILITIES) and reports zone
+assessments, survivor detections, and hazard maps.
 """
 
 import asyncio
 import structlog
 from anthropic import AsyncAnthropic
 
-from agents.tools.flight_tools import FLY_TO_TOOL, create_fly_to_handler
-from agents.tools.sensor_tools import GET_SENSOR_READING_TOOL, create_get_sensor_reading_handler
+from prompts import load_prompt, fill_template
+from agents.tools.schemas import (
+    AGENT_2_TOOLS,
+    DeploySwarmInput,
+    GetSensorReadingInput,
+    UpdateZoneClassificationInput,
+    MarkSurvivorInput,
+    MarkHazardInput,
+    ReportSwarmFindingsInput,
+)
+from agents.tools.flight_tools import create_fly_to_handler
+from agents.tools.sensor_tools import create_get_sensor_reading_handler
 
 logger = structlog.get_logger()
 
@@ -20,7 +31,12 @@ SWARM_CAPABILITIES = {
         "sensors": ["thermal_camera", "gas_detector", "wind_sensor"],
         "altitude": 50,
         "speed": 8,
-        "priority_tasks": ["map_fire_perimeter", "identify_hotspots", "detect_trapped_persons", "assess_spread_direction"],
+        "priority_tasks": [
+            "map_fire_perimeter",
+            "identify_hotspots",
+            "detect_trapped_persons",
+            "assess_spread_direction",
+        ],
         "constraint": "maintain_upwind_position",
     },
     "structural_collapse": {
@@ -29,7 +45,12 @@ SWARM_CAPABILITIES = {
         "sensors": ["acoustic_detector", "co2_sensor", "thermal", "visual_hd"],
         "altitude": 15,
         "speed": 4,
-        "priority_tasks": ["map_void_spaces", "detect_survivors", "assess_structural_integrity", "identify_egress_paths"],
+        "priority_tasks": [
+            "map_void_spaces",
+            "detect_survivors",
+            "assess_structural_integrity",
+            "identify_egress_paths",
+        ],
         "constraint": "avoid_zones_integrity_below_0.2",
     },
     "flood": {
@@ -38,7 +59,12 @@ SWARM_CAPABILITIES = {
         "sensors": ["visual_hd", "thermal", "depth_estimation"],
         "altitude": 80,
         "speed": 18,
-        "priority_tasks": ["map_flood_extent", "identify_isolated_survivors", "assess_flow_direction", "find_safe_approach_routes"],
+        "priority_tasks": [
+            "map_flood_extent",
+            "identify_isolated_survivors",
+            "assess_flow_direction",
+            "find_safe_approach_routes",
+        ],
         "constraint": "maintain_visual_line_of_sight",
     },
     "industrial_hazard": {
@@ -47,7 +73,12 @@ SWARM_CAPABILITIES = {
         "sensors": ["gas_spectrometer", "thermal", "visual_hd"],
         "altitude": 100,
         "speed": 6,
-        "priority_tasks": ["identify_hazard_source", "map_exclusion_zone", "detect_spread_direction", "assess_secondary_risk"],
+        "priority_tasks": [
+            "identify_hazard_source",
+            "map_exclusion_zone",
+            "detect_spread_direction",
+            "assess_secondary_risk",
+        ],
         "constraint": "minimum_200m_standoff_from_source",
     },
     "maritime_sar": {
@@ -56,108 +87,75 @@ SWARM_CAPABILITIES = {
         "sensors": ["visual_hd", "thermal", "ais_receiver"],
         "altitude": 150,
         "speed": 22,
-        "priority_tasks": ["expanding_square_search", "detect_persons_in_water", "track_drift_objects", "coordinate_vessel_response"],
+        "priority_tasks": [
+            "expanding_square_search",
+            "detect_persons_in_water",
+            "track_drift_objects",
+            "coordinate_vessel_response",
+        ],
         "constraint": "maintain_comms_relay_chain",
     },
 }
 
-REPORT_FINDINGS_TOOL = {
-    "name": "report_findings",
-    "description": "Report specialist swarm findings to orchestrator. Call after completing zone assessment.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "incident_id": {"type": "string", "description": "Incident ID from Agent 1 report"},
-            "zones_assessed": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "zone_id": {"type": "string", "description": "Zone ID in format ZONE-{lat}-{lon}"},
-                        "lat": {"type": "number"},
-                        "lon": {"type": "number"},
-                        "findings": {
-                            "type": "object",
-                            "properties": {
-                                "thermal_signatures": {"type": "integer"},
-                                "structural_integrity": {"type": "number"},
-                                "hazards_detected": {"type": "array", "items": {"type": "string"}},
-                                "survivor_count": {"type": "integer"},
-                            },
-                            "required": ["thermal_signatures", "structural_integrity", "hazards_detected", "survivor_count"],
-                        },
-                        "risk_level": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
-                        "actionable": {"type": "boolean"},
-                    },
-                    "required": ["zone_id", "lat", "lon", "findings", "risk_level", "actionable"],
-                },
-            },
-            "survivor_detections": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "lat": {"type": "number"},
-                        "lon": {"type": "number"},
-                        "confidence": {"type": "number"},
-                    },
-                    "required": ["lat", "lon", "confidence"],
-                },
-            },
-            "hazard_map": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "lat": {"type": "number"},
-                        "lon": {"type": "number"},
-                        "type": {"type": "string"},
-                        "exclusion_radius_m": {"type": "number"},
-                    },
-                    "required": ["lat", "lon", "type", "exclusion_radius_m"],
-                },
-            },
-            "coverage_pct": {"type": "number", "description": "Percentage of area covered 0-100"},
-            "notes": {"type": "string"},
-        },
-        "required": ["incident_id", "zones_assessed", "survivor_detections", "hazard_map", "coverage_pct", "notes"],
-    },
-}
+
+def _create_deploy_swarm_handler(world_state):
+    async def deploy_swarm(positions: list[dict]) -> dict:
+        results = []
+        for pos in positions:
+            success = world_state.command_drone(pos["drone_id"], pos["lat"], pos["lon"], pos["alt"])
+            results.append({"drone_id": pos["drone_id"], "status": "ok" if success else "error"})
+        return {"status": "ok", "drones_commanded": results}
+    return deploy_swarm
 
 
-def create_report_findings_handler(orchestrator):
-    async def report_findings(**kwargs) -> dict:
-        orchestrator.receive_agent2_report(kwargs)
-        return {"status": "ok", "message": "Findings reported to orchestrator"}
-    return report_findings
+def _create_update_zone_handler(world_state):
+    async def update_zone_classification(**kwargs) -> dict:
+        # World state zone write — stores for MapStateManager to pick up
+        zone_data = {
+            "zone_id": kwargs["zone_id"],
+            "lat": kwargs["lat"],
+            "lon": kwargs["lon"],
+            "findings": kwargs["findings"],
+            "risk_level": kwargs["risk_level"],
+            "actionable": kwargs["actionable"],
+        }
+        if hasattr(world_state, "update_zone"):
+            world_state.update_zone(zone_data)
+        logger.info("zone_classified", zone_id=kwargs["zone_id"], risk=kwargs["risk_level"])
+        return {"status": "ok", "zone_id": kwargs["zone_id"]}
+    return update_zone_classification
 
 
-AGENT_2_SYSTEM_PROMPT_TEMPLATE = """You are ARIA Specialist Swarm Agent. You control a {swarm_type} swarm of {drone_count} drones.
+def _create_mark_survivor_handler(world_state):
+    async def mark_survivor(**kwargs) -> dict:
+        if hasattr(world_state, "add_survivor_marker"):
+            world_state.add_survivor_marker(kwargs)
+        logger.info("survivor_marked", lat=kwargs["lat"], lon=kwargs["lon"], confidence=kwargs["confidence"])
+        return {"status": "ok", "message": "Survivor marked"}
+    return mark_survivor
 
-Incident classification: {classification}
-Swarm config: {swarm_type}
-Sensors available: {sensors}
-Altitude: {altitude}m
-Constraint: {constraint}
 
-Priority tasks:
-{priority_tasks}
-
-Your mission:
-1. Deploy swarm drones to cover the incident area
-2. Execute priority tasks in order
-3. Report zone assessments with findings
-4. Track survivors and hazards
-5. Report findings when coverage is sufficient
-
-Available tools: fly_to, get_sensor_reading, report_findings
-"""
+def _create_mark_hazard_handler(world_state):
+    async def mark_hazard(**kwargs) -> dict:
+        if hasattr(world_state, "add_hazard_marker"):
+            world_state.add_hazard_marker(kwargs)
+        logger.info("hazard_marked", type=kwargs["type"], exclusion_m=kwargs["exclusion_radius_m"])
+        return {"status": "ok", "message": "Hazard marked"}
+    return mark_hazard
 
 
 class SpecialistAgent:
     """Agent 2: deploys specialist swarm, assesses zones, reports findings."""
 
-    def __init__(self, agent_id: str, model: str, world_state, sensor_overlay, orchestrator, classification: str):
+    def __init__(
+        self,
+        agent_id: str,
+        model: str,
+        world_state,
+        sensor_overlay,
+        orchestrator,
+        classification: str,
+    ):
         self.agent_id = agent_id
         self.model = model
         self.world_state = world_state
@@ -167,25 +165,130 @@ class SpecialistAgent:
         self.client = AsyncAnthropic()
         self._running = False
 
-        self.swarm_config = SWARM_CAPABILITIES[classification]
-        self.drone_ids = []
+        config = SWARM_CAPABILITIES[classification]
+        self.swarm_config = config
+        self.drone_ids: list[str] = []
 
-        self.tools = [FLY_TO_TOOL, GET_SENSOR_READING_TOOL, REPORT_FINDINGS_TOOL]
+        # Build system prompt from registry template
+        template = load_prompt("agent2_specialist")
+        priority_tasks_text = "\n".join(
+            f"{i + 1}. {t.replace('_', ' ')}"
+            for i, t in enumerate(config["priority_tasks"])
+        )
+        filled_text = fill_template(
+            template["text"],
+            swarm_type=config["swarm"],
+            drone_count=str(config["drones"]),
+            sensors=", ".join(config["sensors"]),
+            altitude=str(config["altitude"]),
+            constraint=config["constraint"],
+            priority_tasks=priority_tasks_text,
+        )
+        self._prompt = {"text": filled_text, "version_hash": template["version_hash"]}
+
         self._tool_handlers = {
-            "fly_to": create_fly_to_handler(world_state),
+            "deploy_swarm": _create_deploy_swarm_handler(world_state),
             "get_sensor_reading": create_get_sensor_reading_handler(sensor_overlay, world_state),
-            "report_findings": create_report_findings_handler(orchestrator),
+            "update_zone_classification": _create_update_zone_handler(world_state),
+            "mark_survivor": _create_mark_survivor_handler(world_state),
+            "mark_hazard": _create_mark_hazard_handler(world_state),
+            "report_swarm_findings": self._handle_report_findings,
         }
 
-        self.system_prompt = AGENT_2_SYSTEM_PROMPT_TEMPLATE.format(
-            swarm_type=self.swarm_config["swarm"],
-            drone_count=self.swarm_config["drones"],
-            classification=classification,
-            sensors=", ".join(self.swarm_config["sensors"]),
-            altitude=self.swarm_config["altitude"],
-            constraint=self.swarm_config["constraint"],
-            priority_tasks="\n".join(f"- {t}" for t in self.swarm_config["priority_tasks"]),
-        )
+    async def receive_dispatch(self, payload: dict):
+        """Receive dispatch from orchestrator and start swarm mission."""
+        self.incident_id = payload.get("incident_id", "INC-000")
+        center = payload.get("center", {})
+        logger.info("agent2_dispatched", incident_id=self.incident_id, classification=self.classification)
+        asyncio.create_task(self._run_mission(center))
+
+    async def _run_mission(self, center: dict):
+        """Run the swarm mission via multi-turn Claude tool-use loop."""
+        self._running = True
+        config = self.swarm_config
+
+        mission_brief = {
+            "incident_id": self.incident_id,
+            "classification": self.classification,
+            "center": center,
+            "swarm_drone_ids": self.drone_ids,
+            "sensors": config["sensors"],
+            "altitude_m": config["altitude"],
+            "constraint": config["constraint"],
+        }
+
+        messages = [
+            {
+                "role": "user",
+                "content": (
+                    f"Mission brief:\n\n{mission_brief}\n\n"
+                    f"Execute priority tasks and report findings when coverage >= 70% "
+                    f"or all tasks complete."
+                ),
+            }
+        ]
+
+        while self._running:
+            response = await self.client.messages.create(
+                model=self.model,
+                max_tokens=2048,
+                system=self._prompt["text"],
+                messages=messages,
+                tools=AGENT_2_TOOLS,
+            )
+
+            logger.info(
+                "agent2_llm_response",
+                prompt_version=self._prompt["version_hash"],
+                stop_reason=response.stop_reason,
+            )
+
+            if response.stop_reason == "end_turn":
+                break
+
+            # Collect tool results for next turn
+            tool_results = []
+            for block in response.content:
+                if block.type != "tool_use":
+                    continue
+
+                handler = self._tool_handlers.get(block.name)
+                if not handler:
+                    logger.warning("agent2_unknown_tool", tool=block.name)
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": f"Unknown tool: {block.name}",
+                    })
+                    continue
+
+                result = await handler(**block.input)
+                logger.info("agent2_tool_call", tool=block.name, result=result)
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": str(result),
+                })
+
+                if block.name == "report_swarm_findings":
+                    self._running = False
+                    break
+
+            if not tool_results:
+                break
+
+            # Append assistant turn + tool results for next iteration
+            messages.append({"role": "assistant", "content": response.content})
+            messages.append({"role": "user", "content": tool_results})
+
+    async def _handle_report_findings(self, **kwargs) -> dict:
+        """Validate and forward swarm findings to orchestrator."""
+        _, err = ReportSwarmFindingsInput.validate_call(kwargs)
+        if err:
+            logger.error("agent2_invalid_findings", error=err)
+            return {"status": "error", "message": "Invalid findings schema"}
+        self.orchestrator.receive_agent2_report(kwargs)
+        return {"status": "ok", "message": "Findings reported to orchestrator"}
 
     def stop(self):
         self._running = False
