@@ -166,6 +166,20 @@ class SpecialistAgent:
         self.classification = classification
         self.client = AsyncAnthropic()
         self._running = False
+        self._broadcast_fn = None
+
+    def set_broadcast(self, fn) -> None:
+        self._broadcast_fn = fn
+
+    async def _log(self, event: str, msg: str, **data) -> None:
+        if self._broadcast_fn:
+            try:
+                await self._broadcast_fn({
+                    "type": "agent_log", "agent": "agent2",
+                    "event": event, "msg": msg, "data": data,
+                })
+            except Exception:
+                pass
 
         self.swarm_config = SWARM_CAPABILITIES[classification]
         self.drone_ids = []

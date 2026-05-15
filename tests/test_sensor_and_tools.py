@@ -46,20 +46,20 @@ def test_no_reading_without_incident():
     assert reading is None
 
 
-def test_no_reading_outside_polygon():
+def test_no_reading_outside_radius():
     sensor = SensorOverlay()
-    sensor.set_incident(SQUARE, "fire")
+    sensor.set_incident({"lat": 0.0, "lon": 0.0}, 500.0, "fire")
     ws = WorldState()
     ws.add_drone("d1", "fixed_wing", 5.0, 5.0)  # far outside
     reading = sensor.get_reading("d1", ws)
     assert reading is None
 
 
-def test_fire_reading_inside_polygon():
+def test_fire_reading_inside_radius():
     sensor = SensorOverlay()
-    sensor.set_incident(SQUARE, "fire")
+    sensor.set_incident({"lat": 0.0, "lon": 0.0}, 500.0, "fire")
     ws = WorldState()
-    ws.add_drone("d1", "fixed_wing", 0.0, 0.0)  # inside polygon
+    ws.add_drone("d1", "fixed_wing", 0.0, 0.0)  # at center
     reading = sensor.get_reading("d1", ws)
     assert reading is not None
     assert reading["thermal_detected"] is True
@@ -70,7 +70,7 @@ def test_fire_reading_inside_polygon():
 
 def test_structural_collapse_reading():
     sensor = SensorOverlay()
-    sensor.set_incident(SQUARE, "structural_collapse")
+    sensor.set_incident({"lat": 0.0, "lon": 0.0}, 500.0, "structural_collapse")
     ws = WorldState()
     ws.add_drone("d1", "fixed_wing", 0.0, 0.0)
     reading = sensor.get_reading("d1", ws)
@@ -80,7 +80,7 @@ def test_structural_collapse_reading():
 
 def test_flood_reading():
     sensor = SensorOverlay()
-    sensor.set_incident(SQUARE, "flood")
+    sensor.set_incident({"lat": 0.0, "lon": 0.0}, 500.0, "flood")
     ws = WorldState()
     ws.add_drone("d1", "fixed_wing", 0.0, 0.0)
     reading = sensor.get_reading("d1", ws)
@@ -91,7 +91,7 @@ def test_flood_reading():
 
 def test_unknown_drone_returns_none():
     sensor = SensorOverlay()
-    sensor.set_incident(SQUARE, "fire")
+    sensor.set_incident({"lat": 0.0, "lon": 0.0}, 500.0, "fire")
     ws = WorldState()
     reading = sensor.get_reading("ghost_drone", ws)
     assert reading is None

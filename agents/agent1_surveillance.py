@@ -47,13 +47,11 @@ ORBIT_POINTS = 8
 
 
 def _compute_orbit_point(center_lat, center_lon, radius_m, angle_deg):
-    """Compute a point on a circle at given radius and angle from center."""
     earth_radius = 6_371_000.0
     lat_r = math.radians(center_lat)
     lon_r = math.radians(center_lon)
     bearing_r = math.radians(angle_deg)
     angular_dist = radius_m / earth_radius
-
     new_lat_r = math.asin(
         math.sin(lat_r) * math.cos(angular_dist)
         + math.cos(lat_r) * math.sin(angular_dist) * math.cos(bearing_r)
@@ -77,6 +75,7 @@ class SurveillanceAgent:
         self.drone_id = drone_id
         self.client = AsyncAnthropic()
         self._running = False
+        self._broadcast_fn = None
 
         self.tools = [FLY_TO_TOOL, GET_SENSOR_READING_TOOL, REPORT_CLASSIFICATION_TOOL]
         self._tool_handlers = {
@@ -86,25 +85,38 @@ class SurveillanceAgent:
         }
 
         self.target_coords = None
+        self._incident_id = None
         self.survey_state = "IDLE"
-        self.current_radius_idx = 0
-        self.current_orbit_point = 0
         self.sensor_readings = []
         self.classification_reported = False
+
+    def set_broadcast(self, fn) -> None:
+        self._broadcast_fn = fn
+
+    async def _log(self, event: str, msg: str, **data) -> None:
+        if self._broadcast_fn:
+            try:
+                await self._broadcast_fn({
+                    "type": "agent_log",
+                    "agent": "agent1",
+                    "event": event,
+                    "msg": msg,
+                    "data": data,
+                })
+            except Exception:
+                pass
 
     async def receive_go(self, payload: dict):
         """Receive GO signal (coordinates only) and start survey."""
         self.target_coords = payload["coordinates"]
+        self._incident_id = payload.get("incident_id", f"INC-{int(__import__('time').time())}")
         self.survey_state = "TRANSIT"
-        self.current_radius_idx = 0
-        self.current_orbit_point = 0
         self.sensor_readings = []
         self.classification_reported = False
-        logger.info("agent1_go_received", coords=self.target_coords)
+        logger.info("agent1_go_received", coords=self.target_coords, incident_id=self._incident_id)
         asyncio.create_task(self._run_survey())
 
     async def _run_survey(self):
-        """Execute the expanding circle survey pattern."""
         self._running = True
         center_lat = self.target_coords["lat"]
         center_lon = self.target_coords["lon"]
@@ -119,17 +131,21 @@ class SurveillanceAgent:
 
         # Wait for arrival
         await self._wait_for_arrival(center_lat, center_lon)
+        await self._log("arrived", "Arrived at incident area — beginning survey pattern")
 
         # Phase 2: Expanding circle survey
         self.survey_state = "SURVEYING"
         for radius_idx, radius in enumerate(SURVEY_RADII):
-            self.current_radius_idx = radius_idx
-            orbit_readings = []
+            if not self._running:
+                return
+
+            orbit_hits = []
+            await self._log("orbit_start", f"Orbit {radius_idx+1}/3 — radius {radius:.0f}m")
 
             for point_idx in range(ORBIT_POINTS):
                 if not self._running:
                     return
-                self.current_orbit_point = point_idx
+
                 angle = (360.0 / ORBIT_POINTS) * point_idx
                 pt_lat, pt_lon = _compute_orbit_point(center_lat, center_lon, radius, angle)
 
@@ -139,10 +155,12 @@ class SurveillanceAgent:
                 await self._wait_for_arrival(pt_lat, pt_lon)
 
                 reading = await self._tool_handlers["get_sensor_reading"](drone_id=self.drone_id)
-                orbit_readings.append(reading)
 
                 if reading.get("status") == "ok":
-                    logger.info("agent1_sensor_hit", radius=radius, point=point_idx, data=reading["data"])
+                    orbit_hits.append(reading)
+                    await self._log("sensor_hit",
+                                    f"Sensor data at radius {radius:.0f}m, point {point_idx+1}/{ORBIT_POINTS}",
+                                    radius=radius, point=point_idx, data=reading["data"])
 
             # Check if we got consistent sensor data in this orbit
             hits = [r for r in orbit_readings if r.get("status") == "ok"]
@@ -160,15 +178,13 @@ class SurveillanceAgent:
         self.survey_state = "COMPLETE_NO_DATA"
 
     async def _classify(self, center_lat, center_lon, radius, sensor_hits):
-        """Use LLM to classify the incident from sensor data."""
+        """Use LLM to classify the incident. Forces report_classification via tool_choice."""
         sensor_data = [h["data"] for h in sensor_hits]
-
-        observations = {
-            "survey_center": {"lat": center_lat, "lon": center_lon},
-            "confirmed_radius_m": radius,
-            "sensor_readings": sensor_data,
-            "drone_telemetry": self.world_state.get_drone_telemetry(self.drone_id).__dict__,
-        }
+        telemetry = self.world_state.get_drone_telemetry(self.drone_id)
+        telemetry_dict = {
+            "lat": telemetry.lat, "lon": telemetry.lon, "alt": telemetry.alt,
+            "heading": telemetry.heading, "speed": telemetry.speed, "state": telemetry.state,
+        } if telemetry else {}
 
         messages = [
             {"role": "user", "content": f"Survey complete. Classify this incident from sensor data:\n{observations}"}
