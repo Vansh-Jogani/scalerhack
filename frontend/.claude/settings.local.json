@@ -9,7 +9,8 @@
       "Bash(curl -s http://localhost:5173)",
       "Bash(pkill -f \"python3 main.py\")",
       "Bash(pkill -f \"vite\")",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "WebSearch"
     ]
   }
 }

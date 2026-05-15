@@ -16,9 +16,15 @@ Multi-agent autonomous drone swarm simulation for disaster response — three Cl
 
 ## Current stage
 
-**Stage:** Stage 1 — Foundation (in progress)
-**Last verified working:** Checkpoints 1-3 (FastAPI, WebSocket, markers, telemetry broadcast), Agent architecture (Changes 1-6)
-**Next concrete task:** Full integration test — drone movement under tick loop, frontend verification, Checkpoints 4-6
+**Stage:** Stage 1 — Foundation (COMPLETE — all 6 checkpoints verified 2026-05-15)
+**Last verified working:** All 6 checkpoints confirmed live:
+  - CP1: FastAPI /health 200 on port 8000
+  - CP2: WebSocket telemetry at 10Hz
+  - CP3: fire.json marker-001 in WS broadcast
+  - CP4: Vite frontend on 5173, dark Mapbox map, drone icon + fire marker
+  - CP5: GO signal starts SurveillanceAgent loop, drone → FLYING
+  - CP6: fly_to executes against DroneModel, position confirmed updating in telemetry
+**Next concrete task:** Stage 2 — Agent 1 Complete (begin only after explicit user approval)
 
 Update this block after every session.
 
@@ -66,7 +72,8 @@ Format: `YYYY-MM-DD — decision — rationale`
 
 Format: `YYYY-MM-DD — symptom — root cause — fix`
 
-- *(none yet)*
+- 2026-05-15 — `python` command not found — macOS uses `python3`; `pip install` blocked by PEP 668 — use `setup.sh` to create venv, then `source venv/bin/activate` before all backend commands
+- 2026-05-15 — active_agent1 garbage collected immediately — asyncio task + no reference kept the survey loop alive only briefly — fixed by storing reference in module-level `active_agent1` global
 
 ---
 
