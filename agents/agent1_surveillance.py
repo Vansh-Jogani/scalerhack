@@ -12,8 +12,6 @@ from anthropic import AsyncAnthropic
 from prompts import load_prompt
 from agents.tools.schemas import (
     AGENT_1_TOOLS,
-    FlyToInput,
-    GetSensorReadingInput,
     ReportClassificationInput,
 )
 from agents.tools.flight_tools import create_fly_to_handler
@@ -27,13 +25,11 @@ ORBIT_POINTS = 8
 
 
 def _compute_orbit_point(center_lat, center_lon, radius_m, angle_deg):
-    """Compute a point on a circle at given radius and angle from center."""
     earth_radius = 6_371_000.0
     lat_r = math.radians(center_lat)
     lon_r = math.radians(center_lon)
     bearing_r = math.radians(angle_deg)
     angular_dist = radius_m / earth_radius
-
     new_lat_r = math.asin(
         math.sin(lat_r) * math.cos(angular_dist)
         + math.cos(lat_r) * math.sin(angular_dist) * math.cos(bearing_r)
@@ -57,8 +53,10 @@ class SurveillanceAgent:
         self.drone_id = drone_id
         self.client = AsyncAnthropic()
         self._running = False
+        self._broadcast_fn = None
 
         self._prompt = load_prompt("agent1_surveillance")
+        logger.info("agent1_init", prompt_version=self._prompt["version_hash"])
 
         self._tool_handlers = {
             "fly_to": create_fly_to_handler(world_state),
@@ -67,46 +65,64 @@ class SurveillanceAgent:
         }
 
         self.target_coords = None
+        self._incident_id = None
         self.survey_state = "IDLE"
-        self.current_radius_idx = 0
-        self.current_orbit_point = 0
         self.sensor_readings = []
         self.classification_reported = False
+
+    def set_broadcast(self, fn) -> None:
+        self._broadcast_fn = fn
+
+    async def _log(self, event: str, msg: str, **data) -> None:
+        if self._broadcast_fn:
+            try:
+                await self._broadcast_fn({
+                    "type": "agent_log",
+                    "agent": "agent1",
+                    "event": event,
+                    "msg": msg,
+                    "data": data,
+                })
+            except Exception:
+                pass
 
     async def receive_go(self, payload: dict):
         """Receive GO signal (coordinates only) and start survey."""
         self.target_coords = payload["coordinates"]
+        self._incident_id = payload.get("incident_id", f"INC-{int(__import__('time').time())}")
         self.survey_state = "TRANSIT"
-        self.current_radius_idx = 0
-        self.current_orbit_point = 0
         self.sensor_readings = []
         self.classification_reported = False
-        logger.info("agent1_go_received", coords=self.target_coords)
+        logger.info("agent1_go_received", coords=self.target_coords, incident_id=self._incident_id)
         asyncio.create_task(self._run_survey())
 
     async def _run_survey(self):
-        """Execute the expanding circle survey pattern."""
         self._running = True
         center_lat = self.target_coords["lat"]
         center_lon = self.target_coords["lon"]
         cruise_alt = 120.0
 
-        self.survey_state = "TRANSIT"
+        await self._log("transit", f"Transiting to incident area ({center_lat:.4f}, {center_lon:.4f})")
+
+        # Fly to center
         await self._tool_handlers["fly_to"](
             drone_id=self.drone_id, lat=center_lat, lon=center_lon, alt=cruise_alt
         )
-        logger.info("agent1_transit_started", target=self.target_coords)
         await self._wait_for_arrival(center_lat, center_lon)
+        await self._log("arrived", "Arrived at incident area — beginning survey pattern")
 
         self.survey_state = "SURVEYING"
         for radius_idx, radius in enumerate(SURVEY_RADII):
-            self.current_radius_idx = radius_idx
-            orbit_readings = []
+            if not self._running:
+                return
+
+            orbit_hits = []
+            await self._log("orbit_start", f"Orbit {radius_idx+1}/3 — radius {radius:.0f}m")
 
             for point_idx in range(ORBIT_POINTS):
                 if not self._running:
                     return
-                self.current_orbit_point = point_idx
+
                 angle = (360.0 / ORBIT_POINTS) * point_idx
                 pt_lat, pt_lon = _compute_orbit_point(center_lat, center_lon, radius, angle)
 
@@ -116,39 +132,50 @@ class SurveillanceAgent:
                 await self._wait_for_arrival(pt_lat, pt_lon)
 
                 reading = await self._tool_handlers["get_sensor_reading"](drone_id=self.drone_id)
-                orbit_readings.append(reading)
 
                 if reading.get("status") == "ok":
-                    logger.info("agent1_sensor_hit", radius=radius, point=point_idx, data=reading["data"])
+                    orbit_hits.append(reading)
+                    await self._log("sensor_hit",
+                                    f"Sensor data at radius {radius:.0f}m, point {point_idx+1}/{ORBIT_POINTS}",
+                                    radius=radius, point=point_idx, data=reading["data"])
 
-            hits = [r for r in orbit_readings if r.get("status") == "ok"]
-            if hits:
-                self.sensor_readings = hits
-                logger.info("agent1_area_confirmed", radius=radius, hits=len(hits))
-                await self._classify(center_lat, center_lon, radius, hits)
+            if orbit_hits:
+                self.sensor_readings = orbit_hits
+                await self._log("classifying",
+                                 f"Full orbit complete — {len(orbit_hits)} hits. Classifying...",
+                                 hits=len(orbit_hits))
+                await self._classify(center_lat, center_lon, radius, orbit_hits)
+                # Return to center as loiter position
+                await self._tool_handlers["fly_to"](
+                    drone_id=self.drone_id, lat=center_lat, lon=center_lon, alt=cruise_alt
+                )
                 self.survey_state = "LOITERING"
                 return
 
+        await self._log("no_data", "Survey complete — no sensor data found in any orbit")
         logger.warning("agent1_no_sensor_data", radii_tried=SURVEY_RADII)
         self.survey_state = "COMPLETE_NO_DATA"
 
     async def _classify(self, center_lat, center_lon, radius, sensor_hits):
-        """Use LLM to classify the incident from sensor data."""
+        """Use LLM to classify the incident. Forces report_classification via tool_choice."""
         sensor_data = [h["data"] for h in sensor_hits]
-
-        observations = {
-            "survey_center": {"lat": center_lat, "lon": center_lon},
-            "confirmed_radius_m": radius,
-            "sensor_readings": sensor_data,
-            "drone_telemetry": self.world_state.get_drone_telemetry(self.drone_id).__dict__,
-        }
+        telemetry = self.world_state.get_drone_telemetry(self.drone_id)
+        telemetry_dict = {
+            "lat": telemetry.lat, "lon": telemetry.lon, "alt": telemetry.alt,
+            "heading": telemetry.heading, "speed": telemetry.speed, "state": telemetry.state,
+        } if telemetry else {}
 
         messages = [
             {
                 "role": "user",
                 "content": (
-                    f"Survey complete. Classify this incident from sensor data:\n\n"
-                    f"{observations}"
+                    f"Survey complete. Classify this incident from sensor data.\n\n"
+                    f"Incident ID: {self._incident_id}\n"
+                    f"Survey center: ({center_lat:.6f}, {center_lon:.6f})\n"
+                    f"Confirmed radius: {radius:.1f}m\n"
+                    f"Sensor readings ({len(sensor_data)} orbit hits):\n{sensor_data}\n"
+                    f"Drone telemetry: {telemetry_dict}\n\n"
+                    f"Call report_classification with your findings. Use incident_id: {self._incident_id}"
                 ),
             }
         ]
@@ -159,26 +186,41 @@ class SurveillanceAgent:
             system=self._prompt["text"],
             messages=messages,
             tools=AGENT_1_TOOLS,
+            tool_choice={"type": "tool", "name": "report_classification"},
         )
 
-        logger.info(
-            "agent1_classify_called",
-            prompt_version=self._prompt["version_hash"],
-            stop_reason=response.stop_reason,
-        )
+        logger.info("agent1_classify_llm",
+                    prompt_version=self._prompt["version_hash"],
+                    stop_reason=response.stop_reason)
 
         for block in response.content:
-            if block.type == "tool_use":
-                _, err = ReportClassificationInput.validate_call(block.input)
-                if err:
-                    logger.error("agent1_invalid_tool_call", tool=block.name, error=err)
-                    continue
-                handler = self._tool_handlers.get(block.name)
-                if handler:
-                    result = await handler(**block.input)
-                    logger.info("agent1_tool_call", tool=block.name, result=result)
-                    if block.name == "report_classification":
-                        self.classification_reported = True
+            if block.type != "tool_use" or block.name != "report_classification":
+                continue
+
+            _, err = ReportClassificationInput.validate_call(block.input)
+            if err:
+                logger.error("agent1_invalid_classification", error=err)
+                continue
+
+            call_input = dict(block.input)
+            call_input["prompt_version_hash"] = self._prompt["version_hash"]
+            # Always use the orchestrator's incident_id, not the LLM-generated one
+            if self._incident_id:
+                call_input["incident_id"] = self._incident_id
+
+            result = await self._tool_handlers["report_classification"](**call_input)
+            logger.info("agent1_classified",
+                        classification=block.input.get("classification"),
+                        confidence=block.input.get("confidence"),
+                        result=result)
+
+            await self._log("classified",
+                             f"Classified: {block.input.get('classification')} "
+                             f"(confidence {block.input.get('confidence', 0):.0%})",
+                             classification=block.input.get("classification"),
+                             confidence=block.input.get("confidence"))
+            self.classification_reported = True
+            break
 
     async def _wait_for_arrival(self, target_lat, target_lon, threshold_m=20.0):
         while self._running:

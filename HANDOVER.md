@@ -6,6 +6,128 @@
 
 ---
 
+## [2026-05-16 02:00] — LangGraph + Stage 2 wiring complete
+**Stage:** Stage 2 (in progress)
+**State:** working — 138 tests passing, system boots, LangGraph compiled
+**What got done:**
+- LangGraph 1.2 + SQLite checkpointer integrated into orchestrator
+  - ARIAState TypedDict persisted to aria_checkpoints.db
+  - Graph: START → surveillance_node → swarm_node → advisory_node → END
+  - Agent callbacks resolve asyncio Futures, bridging event-driven agents into LangGraph nodes
+  - Crash recovery: state checkpointed after each node completes
+- Sensor overlay changed from polygon to radius-based (set_incident takes center+radius_m)
+  - Incident radius 600m in sendGo — drone hits it at any orbit radius
+- WorldState: added zones/survivor_markers/hazard_markers + broadcast
+- Agent 1: broadcast callbacks, tool_choice forces report_classification, loiter-to-center after classify
+- Agents 2/3: set_broadcast + log events
+- AdvisoryAgent constructor simplified (removed agent_id param)
+- main.py: wires Agent1, LangGraph checkpointer, broadcasts zones/survivors
+- frontend: agent stream log (colored A1/A2/A3/SYS), incident circle on map, zone circles, survivor markers
+- Map: Leaflet (already was), animated drones with type-colored icons, incident zone circle
+- requirements.txt: langgraph, langgraph-checkpoint-sqlite, aiosqlite, typing_extensions added
+**What's next:**
+- Test with ANTHROPIC_API_KEY: python main.py + npm run dev, then click GO
+- Stage 2 checkpoints: 7-11 need live API to verify
+- Stage 3: orchestrator multi-incident, Agent 2 full loop
+**Blockers / open questions:**
+- Needs ANTHROPIC_API_KEY in .env for live Agent 1/2/3 calls
+**Files touched:**
+- requirements.txt, orchestrator/orchestrator.py (full LangGraph rewrite)
+- sim/sensor_overlay.py (radius-based), sim/world_state.py (zones/survivors/hazards)
+- agents/agent1_surveillance.py (broadcast, tool_choice, loiter)
+- agents/agent2_specialist.py (broadcast, incident_id init)
+- agents/agent3_advisory.py (broadcast, simplified constructor)
+- main.py (LangGraph checkpointer, Agent 1 wiring, zone broadcast)
+- frontend/src/App.jsx (agent stream, incident display)
+- frontend/src/Map.jsx (incident circle, zone circles, survivor markers)
+- tests/test_sensor_and_tools.py (updated for radius-based API)
+
+---
+
+## [2026-05-16 01:10] — Integration Phase 5 complete — EventBus fully wired
+**Stage:** Stage 1 (in progress) — integration all 5 phases done
+**State:** working — 138 tests passing
+**What got done:**
+- Phase 5: EventBus fully wired in orchestrator:
+  - receive_agent1_report: subscribes agent3 handler to all 5 trigger types (idempotent), publishes agent_1_report_received, starts heartbeat
+  - receive_agent2_report: builds IncidentBriefing synchronously (latest_briefing updated before task fires), publishes agent_2_findings_updated via _publish_agent2_findings task
+  - _handle_agent3_trigger: single handler for all bus events, calls agent3.on_trigger(latest_briefing), broadcasts advisory
+  - 500ms coalescing verified: 3 rapid publishes -> 1 dispatch
+  - Heartbeat: fires heartbeat_check after 60s silence (tested in test_event_bus.py)
+- INTEGRATION_REPORT.md produced
+**What's next:**
+- IT-1 through IT-9 integration tests require ANTHROPIC_API_KEY for live LLM calls
+- Full system test per FULL_SYSTEM_TEST.md when key is available
+**Blockers / open questions:**
+- Live integration tests (IT-4 through IT-9) need ANTHROPIC_API_KEY
+**Files touched:**
+- orchestrator/orchestrator.py (IncidentBriefing built synchronously in receive_agent2_report; _run_advisory -> _publish_agent2_findings)
+**Notes for next session:**
+- All typed boundaries tested and working without live API
+- EventBus coalescing verified end-to-end
+
+---
+
+## [2026-05-16 00:55] — Integration Phase 4 complete — typed handoffs wired
+**Stage:** Stage 1 (in progress) — integration phases 1–4 done
+**State:** working — 138 tests passing
+**What got done:**
+- Phase 1: Copied 5 package test files into tests/ (138 total, all pass)
+- Phase 2/3: Already complete (agents 1-3 already using load_prompt + Pydantic schemas)
+- Phase 4: Typed handoffs wired:
+  - agent1_surveillance._classify(): injects prompt_version_hash into report_classification call
+  - agent2_specialist._handle_report_findings(): injects prompt_version_hash before forwarding to orchestrator
+  - orchestrator.py rewritten: SurveillanceReport/SwarmFindings constructed at boundary with ValidationError rejection
+  - orchestrator: Agent 2 instantiated dynamically on classification received (needs classification for constructor)
+  - orchestrator: Agent 3 created once at init; IncidentBriefing constructed and passed typed to agent3.on_trigger
+  - orchestrator: EventBus instantiated (not yet publisher-wired — that's Phase 5)
+  - config.yaml: cleaned up stale Ollama keys, now models.agent2 + models.agent3 (both Claude API)
+  - main.py: passes model strings from config to orchestrator constructor
+**What's next:**
+- Phase 5: Fully wire EventBus (agent_2_findings_updated publish path + verify coalescing)
+**Blockers / open questions:**
+- none
+**Files touched:**
+- agents/agent1_surveillance.py (prompt_version_hash injection)
+- agents/agent2_specialist.py (prompt_version_hash injection)
+- orchestrator/orchestrator.py (full typed handoff rewrite + EventBus init)
+- main.py (model config passthrough)
+- config.yaml (removed stale Ollama keys)
+- tests/ (added 5 package test files)
+**Notes for next session:**
+- EventBus is instantiated in orchestrator and agent_1_report_received is published, but _run_advisory still calls event_bus.publish for agent_2_findings_updated — Phase 5 verifies the coalescing end-to-end
+
+---
+
+## [2026-05-16 00:45] — Build packaged for transfer to main PC
+**Stage:** Stage 1 (in progress) — packaging complete
+**State:** working — package verified, pushed
+**What got done:**
+- Verified all 11 deliverable files present
+- Wrote 5 test files (77 tests) covering D1–D4 + isolation contract
+- 77/77 passing in 1.94s from inside the clean package directory
+- PACKAGE_NOTES.md written: hashes, decisions, deviations, env
+- INTEGRATION.md included (provided by user)
+- Stripped: __pycache__, .pyc, .pytest_cache — none present in archive
+- Archive: prompts-comms-package.tar.gz (66,967 bytes, 36 files)
+- TRANSFER_CHECKSUM.txt: SHA-256 = c26e5345a5c4e4eeab99702b320a615bd5ce596c12aa3fb452068f4b16db7b5b
+- Branch: prompts-comms-package pushed to origin
+- PR available at: github.com/Vansh-Jogani/scalerhack/pull/new/prompts-comms-package
+**What's next:**
+- Main PC: pull branch, extract archive, follow INTEGRATION.md 5-phase plan
+- This machine: switch back to master, continue Stage 1 checkpoints 4–5
+**Blockers / open questions:**
+- none
+**Files touched:**
+- prompts-comms-package/ (new — 29 files)
+- prompts-comms-package.tar.gz (new)
+- TRANSFER_CHECKSUM.txt (new)
+**Notes for next session:**
+- The package is the transfer artifact — the 5 test files are the acceptance gate for integration
+- EventBus still not wired into orchestrator.py — that's Phase 5 of INTEGRATION.md on the main PC
+
+---
+
 ## [2026-05-16 00:05] — Prompt registry + typed comms layer complete (4 deliverables)
 **Stage:** Stage 1 (in progress) — pre-Stage 2 infrastructure
 **State:** working — all smoke tests passing

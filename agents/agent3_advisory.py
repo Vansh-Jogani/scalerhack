@@ -21,13 +21,17 @@ logger = structlog.get_logger()
 class AdvisoryAgent:
     """Agent 3: produces structured advisory from IncidentBriefing via Claude API."""
 
-    def __init__(self, agent_id: str, model: str, orchestrator):
-        self.agent_id = agent_id
+    def __init__(self, model: str, orchestrator):
         self.model = model
         self.orchestrator = orchestrator
         self.client = AsyncAnthropic()
         self.latest_advisory: dict | None = None
         self._prompt = load_prompt("agent3_advisory")
+        self._broadcast_fn = None
+        logger.info("agent3_init", prompt_version=self._prompt["version_hash"])
+
+    def set_broadcast(self, fn) -> None:
+        self._broadcast_fn = fn
 
     async def on_trigger(self, incident_briefing: IncidentBriefing) -> dict:
         """Called by EventBus when a trigger fires. Produces advisory via tool use."""
@@ -85,6 +89,17 @@ class AdvisoryAgent:
                 trigger=incident_briefing.trigger_type,
                 prompt_version=self._prompt["version_hash"],
             )
+            if self._broadcast_fn:
+                try:
+                    import asyncio
+                    asyncio.create_task(self._broadcast_fn({
+                        "type": "agent_log", "agent": "agent3",
+                        "event": "advisory_issued",
+                        "msg": f"Advisory issued for {incident_briefing.incident_id}",
+                        "data": {"trigger": incident_briefing.trigger_type},
+                    }))
+                except Exception:
+                    pass
             return advisory
 
         except Exception as exc:

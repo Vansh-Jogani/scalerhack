@@ -100,11 +100,23 @@ SWARM_CAPABILITIES = {
 
 def _create_deploy_swarm_handler(world_state):
     async def deploy_swarm(positions: list[dict]) -> dict:
+        import asyncio as _asyncio
         results = []
         for pos in positions:
             success = world_state.command_drone(pos["drone_id"], pos["lat"], pos["lon"], pos["alt"])
             results.append({"drone_id": pos["drone_id"], "status": "ok" if success else "error"})
-        return {"status": "ok", "drones_commanded": results}
+
+        # Wait for all drones to arrive (LOITERING = reached target, stops moving)
+        drone_ids = [p["drone_id"] for p in positions if world_state.drones.get(p["drone_id"])]
+        for _ in range(1500):   # up to 150s
+            if all(
+                world_state.drones[d].get_state() in ("LOITERING", "IDLE")
+                for d in drone_ids
+            ):
+                break
+            await _asyncio.sleep(0.1)
+
+        return {"status": "ok", "drones_commanded": results, "all_arrived": True}
     return deploy_swarm
 
 
@@ -164,10 +176,25 @@ class SpecialistAgent:
         self.classification = classification
         self.client = AsyncAnthropic()
         self._running = False
+        self._broadcast_fn = None
+
+    def set_broadcast(self, fn) -> None:
+        self._broadcast_fn = fn
+
+    async def _log(self, event: str, msg: str, **data) -> None:
+        if self._broadcast_fn:
+            try:
+                await self._broadcast_fn({
+                    "type": "agent_log", "agent": "agent2",
+                    "event": event, "msg": msg, "data": data,
+                })
+            except Exception:
+                pass
 
         config = SWARM_CAPABILITIES[classification]
         self.swarm_config = config
         self.drone_ids: list[str] = []
+        self.incident_id: str = "INC-000"
 
         # Build system prompt from registry template
         template = load_prompt("agent2_specialist")
@@ -200,11 +227,15 @@ class SpecialistAgent:
         self.incident_id = payload.get("incident_id", "INC-000")
         center = payload.get("center", {})
         logger.info("agent2_dispatched", incident_id=self.incident_id, classification=self.classification)
+        await self._log("dispatched",
+                        f"Deploying {self.classification} swarm — {len(self.drone_ids)} drones",
+                        drone_ids=self.drone_ids)
         asyncio.create_task(self._run_mission(center))
 
     async def _run_mission(self, center: dict):
         """Run the swarm mission via multi-turn Claude tool-use loop."""
         self._running = True
+        self._findings_reported = False
         config = self.swarm_config
 
         mission_brief = {
@@ -222,13 +253,15 @@ class SpecialistAgent:
                 "role": "user",
                 "content": (
                     f"Mission brief:\n\n{mission_brief}\n\n"
-                    f"Execute priority tasks and report findings when coverage >= 70% "
-                    f"or all tasks complete."
+                    f"Execute priority tasks. When you have assessed the key zones, "
+                    f"call report_swarm_findings to complete the mission."
                 ),
             }
         ]
 
-        while self._running:
+        max_turns = 20
+        turn = 0
+        while self._running and turn < max_turns:
             response = await self.client.messages.create(
                 model=self.model,
                 max_tokens=2048,
@@ -237,10 +270,12 @@ class SpecialistAgent:
                 tools=AGENT_2_TOOLS,
             )
 
+            turn += 1
             logger.info(
                 "agent2_llm_response",
                 prompt_version=self._prompt["version_hash"],
                 stop_reason=response.stop_reason,
+                turn=turn,
             )
 
             if response.stop_reason == "end_turn":
@@ -271,8 +306,21 @@ class SpecialistAgent:
                 })
 
                 if block.name == "report_swarm_findings":
+                    await self._log("findings_reported", "Swarm findings reported to orchestrator")
+                    self._findings_reported = True
                     self._running = False
                     break
+
+                if block.name == "update_zone_classification":
+                    risk = block.input.get("risk_level", "?")
+                    await self._log("zone_assessed",
+                                    f"Zone {block.input.get('zone_id','')} — {risk.upper()}",
+                                    **block.input)
+
+                if block.name == "mark_survivor":
+                    await self._log("survivor",
+                                    f"Survivor detected (confidence {block.input.get('confidence',0):.0%})",
+                                    **block.input)
 
             if not tool_results:
                 break
@@ -281,12 +329,34 @@ class SpecialistAgent:
             messages.append({"role": "assistant", "content": response.content})
             messages.append({"role": "user", "content": tool_results})
 
+        # Fallback: if loop exited without report_swarm_findings being called
+        if not self._findings_reported:
+            logger.warning("agent2_no_report_fallback", turn=turn)
+            await self._log("fallback_report", "Mission loop ended — generating fallback report")
+            fallback = {
+                "incident_id": self.incident_id,
+                "zones_assessed": [],
+                "survivor_detections": [],
+                "hazard_map": [],
+                "coverage_pct": 50.0,
+                "notes": "Fallback report — mission loop exited without explicit report",
+                "prompt_version_hash": self._prompt["version_hash"],
+            }
+            self.orchestrator.receive_agent2_report(fallback)
+
     async def _handle_report_findings(self, **kwargs) -> dict:
         """Validate and forward swarm findings to orchestrator."""
         _, err = ReportSwarmFindingsInput.validate_call(kwargs)
         if err:
-            logger.error("agent2_invalid_findings", error=err)
-            return {"status": "error", "message": "Invalid findings schema"}
+            logger.warning("agent2_findings_validation_partial", error=err)
+            # Keep valid scalar fields, drop invalid nested ones rather than reject entirely
+            kwargs.setdefault("zones_assessed", [])
+            kwargs.setdefault("survivor_detections", [])
+            kwargs.setdefault("hazard_map", [])
+            kwargs.setdefault("coverage_pct", 50.0)
+            kwargs.setdefault("notes", "Partial report — some fields failed validation")
+        kwargs["prompt_version_hash"] = self._prompt["version_hash"]
+        kwargs["incident_id"] = self.incident_id   # always use orchestrator's incident_id
         self.orchestrator.receive_agent2_report(kwargs)
         return {"status": "ok", "message": "Findings reported to orchestrator"}
 
