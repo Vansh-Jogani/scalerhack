@@ -1,0 +1,22 @@
+{
+  "name": "single_fire_test",
+  "center": {"lat": 34.0580, "lon": -118.2400},
+  "markers": [
+    {
+      "id": "marker-001",
+      "lat": 34.0580,
+      "lon": -118.2400,
+      "type": "fire",
+      "radius_m": 200.0,
+      "severity": "high",
+      "confirmed": true
+    }
+  ],
+  "boundary_polygon": [
+    [34.0560, -118.2420],
+    [34.0560, -118.2380],
+    [34.0600, -118.2380],
+    [34.0600, -118.2420]
+  ],
+  "home_position": {"lat": 34.0450, "lon": -118.2500, "alt": 0.0}
+}
