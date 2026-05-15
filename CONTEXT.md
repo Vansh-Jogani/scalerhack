@@ -16,9 +16,9 @@ Multi-agent autonomous drone swarm simulation for disaster response — three Cl
 
 ## Current stage
 
-**Stage:** Not started — Stage 1 pending
-**Last verified working:** N/A
-**Next concrete task:** Produce Stage 1 plan in Opus plan mode
+**Stage:** Stage 1 — Foundation (in progress)
+**Last verified working:** Checkpoints 1-3 (FastAPI, WebSocket, markers, telemetry broadcast), Agent architecture (Changes 1-6)
+**Next concrete task:** Full integration test — drone movement under tick loop, frontend verification, Checkpoints 4-6
 
 Update this block after every session.
 
@@ -54,7 +54,11 @@ These come straight from the spec. They are not up for debate during the build.
 
 Format: `YYYY-MM-DD — decision — rationale`
 
-- *(none yet)*
+- 2026-05-15 — Python 3.11, Node 22 LTS, pytest, structlog, .env+python-dotenv — user choice at session start
+- 2026-05-15 — FastAPI port 8000, Vite port 5173 — standard defaults, user confirmed
+- 2026-05-15 — GO signal flow: operator sends full context (area+polygon+disaster_type), orchestrator strips to coordinates-only for Agent 1 — per CHANGE 1 spec
+- 2026-05-15 — Sensor overlay uses ray-casting point-in-polygon (not distance-to-center) — per CHANGE 3 spec
+- 2026-05-15 — Agent 1 survey pattern: expanding circles at 50m, 100m, 150m with 8 orbit points each — per CHANGE 2 spec
 
 ---
 
@@ -69,11 +73,11 @@ Format: `YYYY-MM-DD — symptom — root cause — fix`
 ## Conventions established
 
 - **File layout:** matches spec exactly. Do not invent new directories.
-- **Python version:** *(decide in Stage 1, then lock here)*
-- **Node version:** *(decide in Stage 1, then lock here)*
-- **Test framework:** *(decide in Stage 1, then lock here)*
-- **Logging:** *(decide in Stage 1, then lock here)*
-- **Secrets:** *(decide in Stage 1, then lock here — likely .env + python-dotenv)*
+- **Python version:** 3.11
+- **Node version:** 22 LTS
+- **Test framework:** pytest + pytest-asyncio
+- **Logging:** structlog (ConsoleRenderer in dev, JSON in prod)
+- **Secrets:** .env + python-dotenv (ANTHROPIC_API_KEY, MAPBOX_TOKEN, VITE_MAPBOX_TOKEN)
 
 ---
 

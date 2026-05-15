@@ -1,41 +1,112 @@
-# ARIA v1 — Claude Code Setup Bundle
+# ARIA v1 — Multi-Agent Drone Swarm Simulation
 
-This bundle gives Claude Code everything it needs to build ARIA v1 with stage discipline, planning rigor, and session continuity.
+Autonomous drone swarm system for disaster response. Three AI agents (Claude + Ollama) control simulated drones, identify incidents, deploy specialist swarms, and produce response plans on a Mapbox operator screen.
 
-## What's in here
+## Quickstart
 
-| File | Purpose | Editable by Claude? |
-|---|---|---|
-| `SPEC.md` | Full build specification — source of truth | **No** |
-| `CLAUDE.md` | Project instructions auto-loaded by Claude Code every session | Rarely (only if rules change) |
-| `CONTEXT.md` | Persistent context across sessions — read at session start, updated at session end | Yes — every session end |
-| `HANDOVER.md` | Append-only running log — newest entries on top | Yes — after every meaningful block |
-| `KICKOFF_PROMPT.md` | The first message you paste into Claude Code | N/A — for you |
+### 1. Setup (one time)
 
-## How to use it
+**Windows:**
+```
+setup.bat
+```
 
-1. Create a fresh empty directory for the project.
-2. Copy `SPEC.md`, `CLAUDE.md`, `CONTEXT.md`, `HANDOVER.md` into it.
-3. `cd` into that directory and run `claude` (Claude Code).
-4. Paste the contents of `KICKOFF_PROMPT.md` as your first message.
-5. Claude will read everything, enter Opus plan mode, and produce a Stage 1 plan.
-6. Review the plan → approve → let it execute → confirm Stage 1 checkpoints → say "proceed to Stage 2".
-7. Repeat through Stage 5.
+**Linux/Mac:**
+```bash
+chmod +x setup.sh run.sh
+./setup.sh
+```
 
-## Session continuity
+### 2. Configure API Keys
 
-When you start a new session (new chat, next day, etc.):
-- Just say "continue" or paste this short prompt:
+Edit `.env` in the project root:
+```
+ANTHROPIC_API_KEY=sk-ant-your_key_here
+MAPBOX_TOKEN=pk.your_mapbox_token_here
+VITE_MAPBOX_TOKEN=pk.your_mapbox_token_here
+```
 
-  > Read CONTEXT.md and the last 5 entries of HANDOVER.md. Tell me current stage, last verified state, and the next concrete task. Then enter plan mode if there's non-trivial work ahead.
+Edit `frontend/.env`:
+```
+VITE_MAPBOX_TOKEN=pk.your_mapbox_token_here
+```
 
-- Claude will pick up exactly where it left off.
+Get keys from:
+- Anthropic: https://console.anthropic.com/
+- Mapbox: https://account.mapbox.com/access-tokens/
 
-## Hard rules baked into the setup
+### 3. Run
 
-- Opus plan mode before non-trivial work
-- Parallel subagents for independent work (scaffolding, research, isolated tests)
-- Stage gates require explicit user approval to cross
-- V1 only — no V2 work
-- Never edit SPEC.md
-- Ask before deciding anything not in the spec
+**Windows:**
+```
+run.bat
+```
+
+**Linux/Mac:**
+```bash
+./run.sh
+```
+
+Opens:
+- Backend: http://localhost:8000/health
+- Frontend: http://localhost:5173
+
+## Architecture
+
+```
+Operator UI (Mapbox) ← WebSocket → FastAPI Backend
+                                         │
+                    ┌────────────────────┤
+                    │                    │
+              Orchestrator         World State
+              (state machine)     (drones + markers)
+                    │
+         ┌─────────┼─────────┐
+         │         │         │
+      Agent 1   Agent 2   Agent 3
+     (Claude)  (Claude)  (Ollama)
+    Surveillance Specialist Advisory
+```
+
+## Manual Start (without scripts)
+
+```bash
+# Terminal 1: Backend
+python -m venv venv
+venv\Scripts\activate   # Windows
+# source venv/bin/activate  # Linux/Mac
+pip install -r requirements.txt
+python main.py
+
+# Terminal 2: Frontend
+cd frontend
+npm install
+npm run dev
+```
+
+## Project Structure
+
+```
+├── sim/                    # Simulation engine
+│   ├── drone_model.py      # Kinematic drone (haversine movement)
+│   ├── world_state.py      # Markers, drones, tick loop
+│   └── sensor_overlay.py   # Point-in-polygon sensor triggers
+├── agents/                 # AI agent system
+│   ├── agent1_surveillance.py  # Expanding circle survey
+│   ├── agent2_specialist.py    # Swarm deployment
+│   └── agent3_advisory.py      # Response plans (Ollama)
+├── orchestrator/           # Deterministic state machine
+├── frontend/src/           # React + Mapbox operator UI
+├── main.py                 # FastAPI entry point
+├── config.yaml             # Ports, models, scenario
+├── setup.bat / setup.sh    # One-time setup
+└── run.bat / run.sh        # Start everything
+```
+
+## Requirements
+
+- Python 3.11+
+- Node.js 22 LTS
+- Anthropic API key (for agents)
+- Mapbox token (for map display)
+- Ollama (optional, for Agent 3 — falls back to deterministic mode)
