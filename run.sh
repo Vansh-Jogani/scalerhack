@@ -29,7 +29,7 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM
 
-echo "[1/2] Starting backend (FastAPI on port 8000)..."
+echo "[1/2] Starting backend (FastAPI on port 8080)..."
 python main.py &
 BACKEND_PID=$!
 
@@ -45,7 +45,7 @@ echo ""
 echo "============================================"
 echo " ARIA v1 is running!"
 echo ""
-echo " Backend:  http://localhost:8000/health"
+echo " Backend:  http://localhost:8080/health"
 echo " Frontend: http://localhost:5173"
 echo ""
 echo " Press Ctrl+C to stop"

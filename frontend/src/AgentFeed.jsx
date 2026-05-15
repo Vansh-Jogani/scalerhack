@@ -13,7 +13,10 @@ const BACKOFF_STEPS = [1000, 2000, 4000, 8000, 30000]
 
 function AgentFeed({ onAdvisoryUpdate, activeIncidentType }) {
   const [entries, setEntries] = useState([])
-  const [connected, setConnected] = useState(true)
+  const [connected, setConnected] = useState(false)
+  const wsRef = useRef(null)
+  const retryCountRef = useRef(0)
+  const retryTimerRef = useRef(null)
   const bottomRef = useRef(null)
 
   const addEntry = useCallback((entry) => {
@@ -23,27 +26,73 @@ function AgentFeed({ onAdvisoryUpdate, activeIncidentType }) {
     })
   }, [])
 
-  // Listen for agent events dispatched by App.jsx from main WS
+  const connect = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) return
+
+    const ws = new WebSocket(`ws://${window.location.host}/ws`)
+    wsRef.current = ws
+
+    ws.onopen = () => {
+      setConnected(true)
+      retryCountRef.current = 0
+    }
+
+    ws.onmessage = (evt) => {
+      try {
+        const msg = JSON.parse(evt.data)
+        if (msg.type !== 'agent_stream') return
+        const d = msg.data || {}
+        const agent = (d.agent_id || '').replace('agent-', 'AGENT_').replace('orchestrator', 'ORCHESTRATOR').toUpperCase()
+        const text = typeof d.content === 'string' ? d.content : JSON.stringify(d.content)
+        addEntry({
+          id: `${Date.now()}-${Math.random()}`,
+          agent,
+          timestamp: new Date().toTimeString().slice(0, 8),
+          text: `${d.event ? d.event + '  ' : ''}${text}`,
+          incident_id: null,
+        })
+        if (agent === 'AGENT_3' && text && onAdvisoryUpdate) {
+          onAdvisoryUpdate(text, new Date().toISOString())
+        }
+      } catch (e) {
+        console.warn('[AgentFeed] parse error', e)
+      }
+    }
+
+    ws.onclose = () => {
+      setConnected(false)
+      wsRef.current = null
+      const delay = BACKOFF_STEPS[Math.min(retryCountRef.current, BACKOFF_STEPS.length - 1)]
+      retryCountRef.current += 1
+      retryTimerRef.current = setTimeout(connect, delay)
+    }
+
+    ws.onerror = () => {
+      ws.close()
+    }
+  }, [addEntry, onAdvisoryUpdate])
+
+  useEffect(() => {
+    connect()
+    return () => {
+      clearTimeout(retryTimerRef.current)
+      wsRef.current?.close()
+    }
+  }, [connect])
+
   useEffect(() => {
     const handler = (e) => {
-      setConnected(true)
-      const entry = {
-        id: `evt-${Date.now()}-${Math.random()}`,
+      addEntry({
+        id: `local-${Date.now()}-${Math.random()}`,
         agent: e.detail.agent,
         timestamp: new Date().toTimeString().slice(0, 8),
         text: e.detail.text,
         incident_id: null,
-      }
-      addEntry(entry)
-
-      // Extract advisory from Agent 3
-      if (e.detail.agent === 'AGENT_3' && e.detail.text && onAdvisoryUpdate) {
-        onAdvisoryUpdate(e.detail.text, entry.timestamp)
-      }
+      })
     }
     window.addEventListener('aria-agent-event', handler)
     return () => window.removeEventListener('aria-agent-event', handler)
-  }, [addEntry, onAdvisoryUpdate])
+  }, [addEntry])
 
   // Auto-scroll to newest (entries are prepended, so scroll to top)
   useEffect(() => {

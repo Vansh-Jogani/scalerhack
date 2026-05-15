@@ -19,7 +19,7 @@ if not exist "venv\Scripts\activate.bat" (
 )
 call venv\Scripts\activate.bat
 
-echo [1/2] Starting backend (FastAPI on port 8000)...
+echo [1/2] Starting backend (FastAPI on port 8080)...
 start "ARIA Backend" cmd /c "call venv\Scripts\activate.bat && python main.py"
 
 echo [2/2] Starting frontend (Vite on port 5173)...
@@ -34,7 +34,7 @@ echo.
 echo ============================================
 echo  ARIA v1 is running!
 echo.
-echo  Backend:  http://localhost:8000/health
+echo  Backend:  http://localhost:8080/health
 echo  Frontend: http://localhost:5173
 echo.
 echo  Close this window to stop both servers.

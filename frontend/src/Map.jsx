@@ -10,7 +10,6 @@ import DispatchAnimation, { findNearestCentre } from './DispatchAnimation.js'
 export { responseCentres }
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN
-console.log('[ARIA] token:', import.meta.env.VITE_MAPBOX_TOKEN ? import.meta.env.VITE_MAPBOX_TOKEN.slice(0, 15) + '…' : 'MISSING')
 
 const MAP_CENTER = [78.4867, 17.3850]
 const MAP_ZOOM = 12
@@ -133,8 +132,9 @@ function Map({ isSelectingLocation, onLocationSelect, incidents, systemStatus })
     }
   }, [isSelectingLocation])
 
-  // Main map initialisation — runs once
+  // Map initialisation
   useEffect(() => {
+    if (mapRef.current) return
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: 'mapbox://styles/mapbox/dark-v11',

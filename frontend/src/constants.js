@@ -1,18 +1,18 @@
 export const DISASTER_COLORS = {
-  FIRE: '#FF4500',
-  STRUCTURAL_COLLAPSE: '#FF8C00',
-  FLOOD: '#00BFFF',
-  INDUSTRIAL_HAZARD: '#ADFF2F',
-  MARITIME_SAR: '#00CED1',
+  FIRE:                '#FF3B3B',
+  STRUCTURAL_COLLAPSE: '#FF8C42',
+  FLOOD:               '#2196F3',
+  INDUSTRIAL_HAZARD:   '#9E9E9E',
+  MARITIME_SAR:        '#00CED1',
 }
 
 // Normalised key lookup (backend sends lowercase)
 export const DISASTER_COLOR_MAP = {
-  fire: '#FF4500',
-  structural_collapse: '#FF8C00',
-  flood: '#00BFFF',
-  industrial_hazard: '#ADFF2F',
-  maritime_sar: '#00CED1',
+  fire:                '#FF3B3B',
+  structural_collapse: '#FF8C42',
+  flood:               '#2196F3',
+  industrial_hazard:   '#9E9E9E',
+  maritime_sar:        '#00CED1',
 }
 
 // SVG icon paths (24×24 viewBox) for disaster pin centres
