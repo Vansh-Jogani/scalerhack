@@ -48,15 +48,43 @@ let _drawMapRef = null
 let _centerMarker = null   // mapboxgl.Marker dot at circle centre
 let _circleCenter = null   // [lng, lat] or null
 let _dispatchAnim = null   // active DispatchAnimation instance
+let _droneBases = []       // drone bases from scenario — used for nearest-base dispatch
+
+let _pendingBases = null
+
+export function setDroneBases(bases) {
+  _droneBases = bases
+  // No visual markers — DroneManager already renders drones from telemetry at base positions
+}
 
 function _onIncidentAdd(incident_id, meta) {
   if (!_drawMapRef) return
   if (_dispatchAnim) _dispatchAnim.stop()
-  const nearest = findNearestCentre([[meta.lon, meta.lat]], responseCentres)
-  if (!nearest) return
+  
+  // Prefer nearest drone base; fallback to nearest response centre
+  let srcGeo = null
+  if (_droneBases.length > 0) {
+    let minDist = Infinity
+    for (const base of _droneBases) {
+      const d = haversineM(meta.lat, meta.lon, base.lat, base.lon)
+      if (d < minDist) { minDist = d; srcGeo = { lat: base.lat, lon: base.lon, name: base.name } }
+    }
+  }
+  if (!srcGeo) {
+    const nearest = findNearestCentre([[meta.lon, meta.lat]], responseCentres)
+    if (!nearest) return
+    srcGeo = { lat: nearest.lat, lon: nearest.lon, name: nearest.name }
+  }
+
+  // Hide the idle drone at that base
+  const baseIdx = _droneBases.findIndex(b => b.lat === srcGeo.lat && b.lon === srcGeo.lon)
+  if (baseIdx >= 0 && _baseMarkers[baseIdx]) {
+    _baseMarkers[baseIdx].getElement().style.opacity = '0'
+  }
+
   const colour = DISASTER_COLOR_MAP[meta.type] || '#FF4500'
   _dispatchAnim = new DispatchAnimation(_drawMapRef, {
-    srcGeo: { lat: nearest.lat, lon: nearest.lon },
+    srcGeo,
     dstGeo: { lat: meta.lat, lon: meta.lon },
     droneCount: 3,
     disasterColour: colour,

@@ -1,13 +1,19 @@
 server:
   host: "0.0.0.0"
-  port: 8080
+  port: 8000
 
 mapbox:
   style: "mapbox://styles/mapbox/dark-v11"
 
 simulation:
   tick_rate_hz: 10
-  scenario: "sim/scenarios/fire.json"
+  default_scenario: "sim/scenarios/fire.json"
+  scenarios:
+    fire:               "sim/scenarios/fire.json"
+    flood:              "sim/scenarios/flood.json"
+    structural_collapse: "sim/scenarios/structural_collapse.json"
+    industrial_hazard:  "sim/scenarios/industrial_hazard.json"
+    maritime_sar:       "sim/scenarios/maritime_sar.json"
 
 models:
   agent1: "claude-haiku-4-5-20251001"

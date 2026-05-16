@@ -30,6 +30,14 @@ def test_load_scenario_creates_markers(world_with_scenario):
         )
         assert m.severity in ("low", "medium", "high", "critical")
 
+def test_load_scenario_wind_and_events(world_with_scenario):
+    wind = world_with_scenario.get_wind()
+    assert "speed_ms" in wind
+    assert "bearing_deg" in wind
+    
+    events = world_with_scenario.events
+    assert isinstance(events, list)
+
 
 def test_load_scenario_sets_home_position(world_with_scenario):
     home = world_with_scenario.home_position
@@ -113,3 +121,17 @@ def test_multiple_drones_tick_independently(world):
         world.tick(1.0)
     assert d1.lat != 0.0
     assert d2.lat == initial_d2_lat
+
+def test_tick_processes_events(world):
+    world.markers = [Marker(id="m1", lat=0.0, lon=0.0, type="fire", radius_m=100.0, severity="high", confirmed=True)]
+    world.events = [{"t_s": 5.0, "type": "fire_growth", "delta_radius_m": 50.0}]
+    world.wind = {"speed_ms": 10.0, "bearing_deg": 90.0}
+    
+    # Tick past 5.0
+    world.tick(6.0)
+    
+    assert len(world.events) == 0
+    m = world.markers[0]
+    assert m.radius_m == 150.0
+    # Center should shift East (90 deg)
+    assert m.lon > 0.0

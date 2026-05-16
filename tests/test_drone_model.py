@@ -236,3 +236,24 @@ def test_battery_stable_while_idle():
     for _ in range(100):
         drone.tick(1.0)
     assert drone.battery_pct == start
+
+def test_auto_rtl_on_low_battery():
+    drone = make_fixed_wing()
+    drone.set_target(TARGET_1KM_LAT, TARGET_1KM_LON, TARGET_ALT)
+    drone.battery_pct = 20.5
+    drone.tick(1.0)
+    assert drone.get_state() == "FLYING"
+    
+    drone.battery_pct = 20.0
+    drone.tick(1.0) # battery drops below threshold
+    assert drone.get_state() == "RTL"
+
+def test_battery_critical_flag():
+    drone = make_fixed_wing()
+    drone.battery_pct = 25.0
+    tel = drone.get_telemetry()
+    assert not tel.battery_critical
+    
+    drone.battery_pct = 19.0
+    tel = drone.get_telemetry()
+    assert tel.battery_critical

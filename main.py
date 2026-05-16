@@ -49,7 +49,7 @@ async def broadcast_event(event_type: str, data: dict) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global world_state, sensor_overlay, orchestrator
-    scenario_path = Path(config["simulation"]["scenario"])
+    scenario_path = Path(config["simulation"]["default_scenario"])
     world_state = WorldState(scenario_path)
     sensor_overlay = SensorOverlay()
     orchestrator = ARIAOrchestrator(
@@ -61,11 +61,23 @@ async def lifespan(app: FastAPI):
     )
     orchestrator.set_event_callback(broadcast_event)
 
-    world_state.add_drone(
-        "drone-001", "fixed_wing",
-        world_state.home_position["lat"],
-        world_state.home_position["lon"],
-    )
+    # Spawn a drone at each defined base in the scenario
+    bases = world_state.get_drone_bases()
+    if bases:
+        for base in bases:
+            world_state.add_drone(
+                base["drone_id"],
+                base.get("drone_type", "fixed_wing"),
+                base["lat"],
+                base["lon"],
+            )
+    else:
+        # Fallback: single drone at home position
+        world_state.add_drone(
+            "drone-001", "fixed_wing",
+            world_state.home_position["lat"],
+            world_state.home_position["lon"],
+        )
     tick_rate = config["simulation"]["tick_rate_hz"]
     tick_task = asyncio.create_task(tick_loop(tick_rate))
     broadcast_task = asyncio.create_task(broadcast_loop())
@@ -87,6 +99,13 @@ async def broadcast_loop():
         if connected_clients and world_state:
             telemetry = world_state.get_all_telemetry()
             markers = [m.model_dump() for m in world_state.get_markers()]
+            
+            for t in telemetry:
+                if sensor_overlay and getattr(sensor_overlay, 'disaster_type', None):
+                    reading = sensor_overlay.get_reading(t["drone_id"], world_state)
+                    if reading:
+                        t["sensors"] = reading
+
             for ws in list(connected_clients):
                 try:
                     for t in telemetry:
@@ -97,6 +116,24 @@ async def broadcast_loop():
                         connected_clients.remove(ws)
         await asyncio.sleep(0.1)
 
+def _spawn_drones_for_scenario() -> None:
+    """Clear existing drones and spawn fresh drones from world_state.drone_bases."""
+    world_state.drones.clear()
+    bases = world_state.get_drone_bases()
+    if bases:
+        for base in bases:
+            world_state.add_drone(
+                base["drone_id"],
+                base.get("drone_type", "fixed_wing"),
+                base["lat"],
+                base["lon"],
+            )
+    else:
+        world_state.add_drone(
+            "drone-001", "fixed_wing",
+            world_state.home_position["lat"],
+            world_state.home_position["lon"],
+        )
 
 async def world_event_task(delay: int = 30):
     """Fire a world event after delay seconds — grows the first marker's radius."""
@@ -123,7 +160,13 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     connected_clients.append(websocket)
     logger.info("ws_connected", client=str(websocket.client))
-    await websocket.send_json({"type": "hello", "status": "connected", "drones": len(world_state.drones), "markers": len(world_state.markers)})
+    await websocket.send_json({
+        "type": "hello",
+        "status": "connected",
+        "drones": len(world_state.drones),
+        "markers": len(world_state.markers),
+        "drone_bases": world_state.get_drone_bases(),
+    })
     try:
         while True:
             data = await websocket.receive_text()
@@ -135,6 +178,16 @@ async def websocket_endpoint(websocket: WebSocket):
                     world_state.command_drone(payload["drone_id"], payload["lat"], payload["lon"], payload["alt"])
                     await websocket.send_json({"type": "ack", "action": "fly_to", "status": "ok"})
                 elif action == "go":
+                    disaster_type = msg["data"].get("disaster_type", "fire")
+                    # Hot-swap scenario if a different type is requested
+                    scenario_map = config["simulation"].get("scenarios", {})
+                    new_path = scenario_map.get(disaster_type)
+                    if new_path:
+                        world_state.load_scenario(new_path)
+                        world_state.elapsed_time = 0.0
+                        _spawn_drones_for_scenario()
+                        # Broadcast updated drone bases to all clients
+                        await broadcast_event("drone_bases", world_state.get_drone_bases())
                     agent1_payload = await orchestrator.receive_go_signal(msg["data"])
                     await websocket.send_json({
                         "type": "ack", "action": "go", "status": "ok",

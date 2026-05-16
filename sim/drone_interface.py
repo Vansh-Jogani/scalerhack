@@ -12,6 +12,7 @@ class Telemetry:
     speed: float
     state: str
     battery_pct: float
+    battery_critical: bool = False
 
 
 class DroneInterface(ABC):

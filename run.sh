@@ -29,23 +29,20 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM
 
-echo "[1/2] Starting backend (FastAPI on port 8080)..."
-python main.py &
+echo "[1/2] Starting backend (FastAPI on port 8000)..."
+source venv/bin/activate
+python3 main.py &
 BACKEND_PID=$!
 
-echo "[2/2] Starting frontend (Vite on port 5173)..."
+echo "[2/2] Starting frontend (Vite)..."
 cd frontend
 npm run dev &
 FRONTEND_PID=$!
 cd ..
 
-sleep 3
-
-echo ""
-echo "============================================"
-echo " ARIA v1 is running!"
-echo ""
-echo " Backend:  http://localhost:8080/health"
+echo "=================================================="
+echo " ARIA V1 SIMULATION RUNNING"
+echo " Backend:  http://localhost:8000/health"
 echo " Frontend: http://localhost:5173"
 echo ""
 echo " Press Ctrl+C to stop"

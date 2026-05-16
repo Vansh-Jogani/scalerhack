@@ -322,7 +322,7 @@ export default function CommandDashboard({
           fontSize: 9,
           fontFamily: 'var(--font-mono)',
           letterSpacing: '0.06em',
-          color: connected ? 'var(--success)' : '#2A3545',
+          color: connected ? '#FF4D4D' : '#808080',
         }}>
           {connected ? '● LIVE' : '○ OFFLINE'}
         </span>
@@ -348,7 +348,7 @@ export default function CommandDashboard({
               background: isSelectingLocation ? `${accent}12` : 'transparent',
               border: `1px solid ${isSelectingLocation ? accent : 'var(--border)'}`,
               borderRadius: 3,
-              color: isSelectingLocation ? accent : 'var(--text-secondary)',
+              color: '#FFFFFF',
               fontFamily: 'var(--font-display)',
               fontSize: 11,
               fontWeight: 600,
@@ -364,7 +364,7 @@ export default function CommandDashboard({
                 background: 'transparent',
                 border: '1px solid var(--critical)',
                 borderRadius: 3,
-                color: 'var(--critical)',
+                color: '#FFFFFF',
                 fontFamily: 'var(--font-display)',
                 fontSize: 10,
                 fontWeight: 600,
@@ -383,15 +383,15 @@ export default function CommandDashboard({
               borderRadius: 3,
               fontFamily: 'var(--font-mono)',
               fontSize: 10,
-              color: 'var(--text-primary)',
+              color: '#FFFFFF',
               letterSpacing: '0.04em',
               lineHeight: 1.9,
             }}>
-              <span style={{ color: 'var(--text-secondary)' }}>LAT  </span>{coords.lat.toFixed(5)}
+              <span style={{ color: '#FFFFFF' }}>LAT  </span>{coords.lat.toFixed(5)}
               {'  '}
-              <span style={{ color: 'var(--text-secondary)' }}>LON  </span>{coords.lon.toFixed(5)}
+              <span style={{ color: '#FFFFFF' }}>LON  </span>{coords.lon.toFixed(5)}
               {hasZone && (<><br />
-                <span style={{ color: 'var(--text-secondary)' }}>RAD  </span>
+                <span style={{ color: '#FFFFFF' }}>RAD  </span>
                 {coords.radius_m >= 1000 ? (coords.radius_m / 1000).toFixed(2) + ' km' : coords.radius_m + ' m'}
               </>)}
             </div>
@@ -594,7 +594,7 @@ export default function CommandDashboard({
                 <span style={{
                   fontSize: 11,
                   fontFamily: 'var(--font-mono)',
-                  color: 'var(--text-primary)',
+                  color: '#FFFFFF',
                   lineHeight: 1.5,
                   wordBreak: 'break-word',
                 }}>{e.content}</span>

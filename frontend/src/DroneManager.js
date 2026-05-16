@@ -63,7 +63,9 @@ class _DroneManager {
   updateDrone(data) {
     if (!this._map) return
     const { drone_id, lat, lon, heading, state, battery_pct, alt, speed, disaster_type } = data
-    const color = disaster_type ? (DISASTER_COLOR_MAP[disaster_type] || '#00FF88') : '#00FF88'
+    const isIdle = state === 'IDLE' || state === 'idle'
+    const activeColor = disaster_type ? (DISASTER_COLOR_MAP[disaster_type] || '#00FF88') : '#00FF88'
+    const color = isIdle ? '#4A5568' : activeColor
 
     if (!this._drones[drone_id]) {
       // Create marker
@@ -148,6 +150,14 @@ class _DroneManager {
       d.battery_pct = battery_pct ?? d.battery_pct
       d.alt = alt ?? d.alt
       d.speed = speed ?? d.speed
+
+      // Update drone glow color when state changes
+      const prevIsIdle = d.color === '#4A5568'
+      const nowIsIdle = state === 'IDLE' || state === 'idle'
+      if (prevIsIdle !== nowIsIdle) {
+        d.color = color
+        if (d.svgEl) d.svgEl.innerHTML = droneGlowSVG(color)
+      }
 
       // Update badge color
       d.badge.style.background = DRONE_STATES[d.state] || DRONE_STATES.IDLE

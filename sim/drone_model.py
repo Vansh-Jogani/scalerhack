@@ -34,6 +34,9 @@ EARTH_RADIUS_M = 6_371_000.0
 # Arrival threshold in meters
 ARRIVAL_THRESHOLD_M = 5.0
 
+# Battery threshold to trigger auto-RTL
+BATTERY_RTL_THRESHOLD = 20.0
+
 
 def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Return great-circle distance in meters between two lat/lon points."""
@@ -188,6 +191,10 @@ class DroneModel(DroneInterface):
         # Simple battery drain: 0.01% per second while not idle
         if self._state != "IDLE":
             self.battery_pct = max(0.0, self.battery_pct - 0.01 * dt)
+            
+        # Check RTL threshold
+        if self.battery_pct <= BATTERY_RTL_THRESHOLD and self._state not in ("RTL", "IDLE"):
+            self.return_to_launch()
 
     def _move_toward_target(self, dt: float) -> None:
         """Move the drone toward its current target using great-circle math."""
@@ -246,6 +253,7 @@ class DroneModel(DroneInterface):
             speed=self.speed,
             state=self._state,
             battery_pct=self.battery_pct,
+            battery_critical=(self.battery_pct <= BATTERY_RTL_THRESHOLD),
         )
 
     def get_state(self) -> str:

@@ -1,25 +1,34 @@
 {
   "name": "industrial_hazard_test",
+  "center": { "lat": 17.3720, "lon": 78.5190 },
   "markers": [
     {
       "id": "marker-ih-001",
-      "lat": 34.040,
-      "lon": -118.310,
+      "lat": 17.3720,
+      "lon": 78.5190,
       "type": "industrial_hazard",
-      "radius_m": 300.0,
+      "radius_m": 350.0,
       "severity": "critical",
       "confirmed": true
     }
   ],
-  "home_position": {
-    "lat": 34.030,
-    "lon": -118.320,
-    "alt": 0.0
-  },
   "boundary_polygon": [
-    [34.037, -118.313],
-    [34.043, -118.313],
-    [34.043, -118.307],
-    [34.037, -118.307]
-  ]
+    [17.3690, 78.5160],
+    [17.3690, 78.5220],
+    [17.3750, 78.5220],
+    [17.3750, 78.5160]
+  ],
+  "wind": { "speed_ms": 5.0, "bearing_deg": 270 },
+  "events": [
+    { "t_s": 20,  "type": "fire_growth", "delta_radius_m": 60 },
+    { "t_s": 75,  "type": "fire_growth", "delta_radius_m": 100 }
+  ],
+  "drone_bases": [
+    { "id": "base-secunderabad", "name": "Secunderabad Fire Station",  "lat": 17.4428, "lon": 78.4880, "drone_id": "drone-001", "drone_type": "fixed_wing" },
+    { "id": "base-kukatpally",   "name": "Kukatpally Fire Station",     "lat": 17.4921, "lon": 78.3918, "drone_id": "drone-002", "drone_type": "rotary" },
+    { "id": "base-moghalpura",   "name": "Moghalpura Fire Station",     "lat": 17.3596, "lon": 78.4767, "drone_id": "drone-003", "drone_type": "rotary" },
+    { "id": "base-madhapur",     "name": "Madhapur Fire Station",       "lat": 17.4493, "lon": 78.3750, "drone_id": "drone-004", "drone_type": "rotary" },
+    { "id": "base-ndrf-amberpet","name": "NDRF 10th Battalion",         "lat": 17.4118, "lon": 78.5342, "drone_id": "drone-005", "drone_type": "fixed_wing" }
+  ],
+  "home_position": { "lat": 17.4428, "lon": 78.4880, "alt": 0.0 }
 }

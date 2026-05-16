@@ -51,6 +51,20 @@
 
 ---
 
+## [2026-05-16 03:20] — Simulator Upgrades Implemented
+**Stage:** Stage 1 (in progress)
+**State:** working
+**What got done:**
+- Added wind and dynamic event payload support to `fire.json` scenario.
+- Updated `WorldState.tick()` to process event timelines and dynamically grow/shift fire markers downwind.
+- Upgraded `SensorOverlay.get_reading()` with realistic distance falloff, altitude degradation (>80m for fires), and wind noise jitter.
+- Updated `DroneModel.tick()` to enforce an automatic Return-to-Launch when battery drops to 20%, and broadcast `battery_critical` in telemetry.
+- Updated all associated test suites (now 65/65 passing).
+**What's next:**
+- Return to prompt and comms integration, or test new simulation features in UI.
+**Blockers / open questions:**
+- none
+
 ## [2026-05-15 22:40] — Stage 1 test suite created, 61/61 passing
 **Stage:** Stage 1 (in progress)
 **State:** working
