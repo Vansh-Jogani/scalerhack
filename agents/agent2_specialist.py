@@ -5,7 +5,10 @@ import math
 import structlog
 from anthropic import AsyncAnthropic
 
-from agents.tools.flight_tools import FLY_TO_TOOL, create_fly_to_handler
+from agents.tools.flight_tools import (
+    FLY_TO_TOOL, FIND_NEAREST_BASE_TOOL, LAUNCH_FROM_BASE_TOOL,
+    create_fly_to_handler, create_find_nearest_base_handler, create_launch_from_base_handler,
+)
 from agents.tools.sensor_tools import GET_SENSOR_READING_TOOL, create_get_sensor_reading_handler
 from prompts.registry import load_prompt, fill_template
 
@@ -173,9 +176,11 @@ class SpecialistAgent:
             priority_tasks="\n".join(f"- {t}" for t in self.swarm_config["priority_tasks"]),
         )
 
-        self.tools = [FLY_TO_TOOL, GET_SENSOR_READING_TOOL, REPORT_FINDINGS_TOOL]
+        self.tools = [FLY_TO_TOOL, FIND_NEAREST_BASE_TOOL, LAUNCH_FROM_BASE_TOOL, GET_SENSOR_READING_TOOL, REPORT_FINDINGS_TOOL]
         self._tool_handlers = {
             "fly_to": create_fly_to_handler(world_state),
+            "find_nearest_base": create_find_nearest_base_handler(world_state),
+            "launch_from_base": create_launch_from_base_handler(world_state),
             "get_sensor_reading": create_get_sensor_reading_handler(sensor_overlay, world_state),
             "report_findings": self._create_report_findings_handler(),
         }
@@ -212,16 +217,28 @@ class SpecialistAgent:
         else:
             drone_type = "rotary"
 
+        # Find the nearest deployment base with matching drone type
+        bases = self.world_state.get_bases()
+        matching = [b for b in bases if drone_type in b["stocked_drone_types"]] or bases
+        nearest_base = min(matching, key=lambda b: _haversine(center_lat, center_lon, b["lat"], b["lon"]))
+        base_lat, base_lon = nearest_base["lat"], nearest_base["lon"]
+        base_dist = _haversine(center_lat, center_lon, base_lat, base_lon)
+
+        await self._emit("base_selected", f"Launching from {nearest_base['name']} — {base_dist:.0f}m from incident")
+
         num_drones = self.swarm_config["drones"]
-        staging_lat = center_lat + 0.009
         for i in range(num_drones):
             drone_id = f"swarm-{self.agent_id}-{i}"
-            offset_lon = center_lon + (i - num_drones // 2) * 0.0008
-            self.world_state.add_drone(drone_id, drone_type, staging_lat, offset_lon)
+            # Tight cluster at base, small stagger so they don't overlap
+            offset = (i - num_drones // 2) * 0.00015
+            self.world_state.add_drone(drone_id, drone_type, base_lat + offset, base_lon + offset)
             self.drone_ids.append(drone_id)
             self._readings[drone_id] = []
+            if i == 0:
+                self.world_state.mark_swarm_leader(drone_id)
 
-        await self._emit("swarm_deployed", {"drones": self.drone_ids, "type": drone_type, "count": num_drones})
+        await self._emit("swarm_launched", f"{num_drones}× {drone_type} launched from {nearest_base['name']} — {base_dist:.0f}m to incident")
+        await self._emit("mission_plan", f"Survey grid: 3×3 cells · step={radius_m/2:.0f}m · altitude={self.swarm_config['altitude']}m · constraint: {self.swarm_config['constraint']}")
 
         grid = self._generate_survey_grid(center_lat, center_lon, radius_m)
         assignments: dict[str, list] = {did: [] for did in self.drone_ids}
@@ -233,7 +250,11 @@ class SpecialistAgent:
         ])
 
         all_readings = [r for did in self.drone_ids for r in self._readings.get(did, [])]
-        await self._emit("survey_complete", {"total_readings": len(all_readings)})
+        hits = [r for r in all_readings if r.get("status") == "ok"]
+        thermal_count = sum(1 for r in hits if r.get("data", {}).get("thermal_detected"))
+        surv_detections = [r for r in hits if r.get("data", {}).get("survivor_probability", 0) > 0.4]
+        await self._emit("survey_complete", f"Grid complete — {len(hits)} sensor hits · {thermal_count} thermal signatures · {len(surv_detections)} possible survivor contacts")
+        await self._emit("llm_call", f"Calling claude-haiku-4-5 with tool_choice=report_findings · correlating {len(hits)} readings across {num_drones} drones")
         await self._report_via_llm(agent1_report, all_readings)
         self._running = False
 
@@ -290,7 +311,10 @@ class SpecialistAgent:
                     result = await handler(**block.input)
                     logger.info("agent2_tool_call", tool=block.name, result=result)
                     if block.name == "report_findings":
-                        await self._emit("findings_reported", block.input)
+                        cov = block.input.get('coverage_pct', 0)
+                        surv = len(block.input.get('survivor_detections', []))
+                        zones = len(block.input.get('zones_assessed', []))
+                        await self._emit("findings_reported", f"Report filed — coverage {cov}% — {zones} zones — {surv} survivor detections")
 
     def stop(self) -> None:
         self._running = False

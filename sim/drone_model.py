@@ -10,20 +10,20 @@ from typing import Optional, Tuple
 from sim.drone_interface import DroneInterface, Telemetry
 
 FIXED_WING_DEFAULTS = {
-    "cruise_speed": 18.0,   # m/s
+    "cruise_speed": 30.0,   # m/s — fast recon
     "cruise_alt": 120.0,    # m AGL
     "loiter_radius": 80.0,  # m
     "turn_radius": 45.0,    # m
 }
 
 ROTARY_DEFAULTS = {
-    "cruise_speed": 8.0,
+    "cruise_speed": 18.0,   # m/s — fast transit for demo
     "hover_alt": 30.0,
     "loiter_time": 30.0,
 }
 
 MICRO_ROTARY_DEFAULTS = {
-    "cruise_speed": 4.0,
+    "cruise_speed": 10.0,   # m/s
     "hover_alt": 10.0,
     "loiter_time": 60.0,
 }

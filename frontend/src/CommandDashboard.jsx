@@ -181,6 +181,7 @@ export default function CommandDashboard({
   const [selectedType, setSelectedType] = useState(null)
   const [selectedSeverity, setSelectedSeverity] = useState(null)
   const [deployStatus, setDeployStatus] = useState('idle')
+  const [controlsExpanded, setControlsExpanded] = useState(true)
 
   // ── Agent feed state ──
   const [entries, setEntries] = useState([])
@@ -263,7 +264,7 @@ export default function CommandDashboard({
   const canDeploy = coords && selectedType && selectedSeverity && deployStatus === 'idle'
   const accent = selectedType ? DISASTER_COLORS[selectedType] : 'var(--text-secondary)'
 
-  function handleClear() { clearDrawPolygon(); setCoords(null) }
+  function handleClear() { clearDrawPolygon(); setCoords(null); setControlsExpanded(true) }
 
   async function deploy() {
     if (!canDeploy) return
@@ -273,6 +274,7 @@ export default function CommandDashboard({
       return
     }
     setDeployStatus('dispatching')
+    setControlsExpanded(false)
     try {
       wsRef.current.send(JSON.stringify({
         type: 'command',
@@ -321,19 +323,28 @@ export default function CommandDashboard({
           textTransform: 'uppercase',
           color: '#E8EDF5',
           fontWeight: 700,
-        }}>Incident Command</span>
-        <span style={{
-          fontSize: 9,
-          fontFamily: 'var(--font-mono)',
-          letterSpacing: '0.06em',
-          color: connected ? 'var(--success)' : '#2A3545',
         }}>
-          {connected ? '● LIVE' : '○ OFFLINE'}
+          Incident Command
+          {deployStatus === 'active' && !controlsExpanded && (
+            <span style={{ marginLeft: 8, fontSize: 9, color: '#00FF88', fontWeight: 400 }}>● MISSION ACTIVE</span>
+          )}
         </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.06em', color: connected ? 'var(--success)' : '#2A3545' }}>
+            {connected ? '● LIVE' : '○ OFFLINE'}
+          </span>
+          <button onClick={() => setControlsExpanded(v => !v)} style={{
+            background: 'transparent', border: '1px solid var(--border)', borderRadius: 2,
+            color: '#7A8FA8', fontFamily: 'var(--font-mono)', fontSize: 11, cursor: 'pointer',
+            padding: '2px 7px', lineHeight: 1,
+          }} title={controlsExpanded ? 'Collapse controls' : 'Expand controls'}>
+            {controlsExpanded ? '▲' : '▼'}
+          </button>
+        </div>
       </div>
 
       {/* ── Command controls ── */}
-      <div style={{
+      {controlsExpanded && <div style={{
         padding: '12px 14px',
         borderBottom: '1px solid var(--border)',
         display: 'flex',
@@ -489,7 +500,7 @@ export default function CommandDashboard({
           {deployStatus === 'failed'      && '✕  DEPLOY FAILED'}
           {deployStatus === 'idle'        && 'DEPLOY INCIDENT'}
         </button>
-      </div>
+      </div>}
 
       {/* ── Tab bar ── */}
       <div style={{

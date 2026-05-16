@@ -3,7 +3,7 @@
 import asyncio
 import json
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from pydantic import BaseModel
 
@@ -19,6 +19,27 @@ class Marker(BaseModel):
     radius_m: float
     severity: str
     confirmed: bool
+    # Hybrid discovery fields — ground_truth_type hidden from agents
+    type_hint: Optional[str] = None
+    ground_truth_type: Optional[str] = None
+
+    @property
+    def operator_hint(self) -> str:
+        return self.type_hint or self.type
+
+    @property
+    def truth(self) -> str:
+        return self.ground_truth_type or self.type
+
+
+# Pre-distributed deployment bases across Hyderabad demo area
+DEPLOYMENT_BASES = [
+    {"id": "base-alpha",  "name": "Alpha Base",  "lat": 17.3920, "lon": 78.4840, "stocked_drone_types": ["fixed_wing", "rotary", "micro_rotary"]},
+    {"id": "base-bravo",  "name": "Bravo Base",  "lat": 17.3800, "lon": 78.4920, "stocked_drone_types": ["rotary", "micro_rotary"]},
+    {"id": "base-charlie","name": "Charlie Base", "lat": 17.3860, "lon": 78.5010, "stocked_drone_types": ["fixed_wing", "rotary"]},
+    {"id": "base-delta",  "name": "Delta Base",  "lat": 17.3760, "lon": 78.4830, "stocked_drone_types": ["rotary", "micro_rotary"]},
+    {"id": "base-echo",   "name": "Echo Base",   "lat": 17.3940, "lon": 78.4960, "stocked_drone_types": ["fixed_wing", "rotary"]},
+]
 
 
 class WorldState:
@@ -31,6 +52,8 @@ class WorldState:
         self.tick_count: int = 0
         self.home_position: Dict[str, float] = {"lat": 0.0, "lon": 0.0, "alt": 0.0}
         self._running: bool = False
+        self.bases: List[dict] = list(DEPLOYMENT_BASES)
+        self._swarm_leaders: Set[str] = set()  # drone_ids tagged as swarm leader
 
         if scenario_path:
             self.load_scenario(str(scenario_path))
@@ -59,7 +82,18 @@ class WorldState:
         return {did: drone.get_telemetry() for did, drone in self.drones.items()}
 
     def get_all_telemetry(self) -> List[dict]:
-        return [drone.get_telemetry().__dict__ for drone in self.drones.values()]
+        result = []
+        for drone in self.drones.values():
+            t = drone.get_telemetry().__dict__.copy()
+            t["swarm_leader"] = drone.drone_id in self._swarm_leaders
+            result.append(t)
+        return result
+
+    def get_bases(self) -> List[dict]:
+        return list(self.bases)
+
+    def mark_swarm_leader(self, drone_id: str) -> None:
+        self._swarm_leaders.add(drone_id)
 
     def tick(self, dt: float) -> None:
         for drone in self.drones.values():

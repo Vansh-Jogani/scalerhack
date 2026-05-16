@@ -4,6 +4,54 @@
 > Add an entry after: stage completion, blocker hit, architectural decision, end of session.
 > Format below. Keep entries tight — full prose belongs in `CONTEXT.md`.
 
+2026-05-16 — Full system verified end-to-end + UI redesign
+**Fixed:** Anthropic API key had `ssk-` prefix typo → corrected to `sk-` in .env
+**UI redesign:** App.jsx now full-screen map with SidePanel.jsx as left-side semi-transparent glass overlay (rgba(8,12,20,0.82) + backdrop-filter:blur(16px)). CommandDashboard removed. SidePanel has: zone draw → type grid → severity → deploy → agent status dots (idle/active/done/error with pulse animation) → pipeline feed → advisory tab.
+**Locations tightened:** fire.json marker at (17.3880, 78.4895) — ~400m from home drone. Bases moved to 5 locations within 2km of action area. Agent2 staging reduced from 1km to 220m north.
+**E2E verified:** INC-1778890609 — A1 classified industrial_hazard (type_hint=fire, confirmed_hint=false) ✓ A2 coverage_pct=85 ✓ advisory_issued ✓ Full pipeline ~90s
+**Next:** Run FULL_SYSTEM_TEST.md
+
+---
+
+2026-05-16 — Phases 2–6 complete: Final Integration rework
+**Phase 2 — Drone movement + uniform icon:** DroneManager already had clean lerp (no jitter). Icon already uniform across drones. Arrival detection uses LOITERING telemetry state. No changes needed beyond what Phase 1 established.
+**Phase 3 — Deployment bases:**
+- sim/world_state.py: DEPLOYMENT_BASES (5 Hyderabad sites), get_bases(), mark_swarm_leader(), swarm_leader tag in get_all_telemetry()
+- agents/tools/flight_tools.py: FIND_NEAREST_BASE_TOOL + LAUNCH_FROM_BASE_TOOL + handlers (haversine distance matching by stocked_drone_types)
+- agents/agent2_specialist.py: base tools injected, drone index 0 marked as swarm_leader
+- main.py: bases broadcast in WS hello + broadcast_loop
+- MapStateManager.js: renderBases() renders grey square dots with popups; App.jsx handles 'hello'/'bases' WS events
+**Phase 4 — Hybrid discovery:**
+- sim/scenarios/fire.json: type_hint="possible fire", ground_truth_type="industrial_hazard" (mismatch demo)
+- sim/world_state.py Marker model: type_hint + ground_truth_type optional fields, .truth + .operator_hint properties
+- orchestrator/orchestrator.py: _lookup_ground_truth() finds nearest marker truth; sensor_overlay gets ground_truth; agent1_payload includes type_hint
+- agents/agent1_surveillance.py: stores type_hint from payload, includes it in _classify() observations
+- agents/tools/report_tools.py: confirmed_hint boolean added to REPORT_CLASSIFICATION_TOOL schema
+- prompts/agent1_surveillance.md: updated — "type_hint may be wrong, classify from sensors, set confirmed_hint"
+**Phase 5 — Swarm visualization (Option A):**
+- DroneManager.js: satellite markers (4x) created for swarm_leader drones; offsets at ±45°/±135°/±225°/±315° relative to heading at ~40m spacing; update every RAF tick
+**Phase 6 — Operator UI:**
+- CommandDashboard.jsx: controlsExpanded state; collapse on deploy, re-expand on CLEAR; ▲/▼ toggle in header; "● MISSION ACTIVE" badge when collapsed
+- Agent log already streaming via agent_stream WS events; advisory already renders structured output
+**Verified:** npm build clean; WS hello includes 5 bases; find_nearest_base → base-central (2334m); launch_from_base spawns drone; swarm_leader=True in telemetry; fire.json ground_truth=industrial_hazard
+**Next:** Run FULL_SYSTEM_TEST.md end-to-end with live Anthropic API key
+
+---
+
+2026-05-16 — Phase 1 complete: Leaflet → Mapbox GL JS migration
+**What changed:**
+- package.json: leaflet removed, mapbox-gl@^3 added
+- Map.jsx: L.map → new mapboxgl.Map (dark-v11 style), response centres via mapboxgl.Marker, zone-drawing via GeoJSON source + fill/line layers, mapboxgl.accessToken set from VITE_MAPBOX_TOKEN
+- MapStateManager.js: all L.divIcon/L.marker → mapboxgl.Marker with DOM elements; L.circle risk zones → GeoJSON polygon sources + fill/line layers; circleGeoJSON() helper for geographic circle approximation
+- DroneManager.js: L.marker → mapboxgl.Marker; L.polyline trail → GeoJSON source + line layer; setLatLng → setLngLat ([lon,lat] order); RAF loop unchanged
+- DispatchAnimation.js: all Leaflet replaced with mapboxgl.Marker; trails use addTrail() helper (GeoJSON source + layer); burst rings via DOM elements on Markers with pixel-size computed from metersToPixels(); assessment panel appended to map.getContainer() (same as before)
+- Backend port moved to 8090 (8080 occupied by Open WebUI on this machine)
+**Verified:** npm run build → 0 errors; dev server at localhost:5173; backend at localhost:8090/health OK; no leaflet imports remain in src/
+**Next:** Phase 2 (uniform drone icon + jitter audit), then Phase 3–6 from FINAL_INTEGRATION.md
+**Coordinate note:** Mapbox uses [lon, lat] — all lat/lon pairs flipped vs. Leaflet. Key risk area for future edits.
+
+---
+
 2026-05-16 — Stage 2 rebuild complete — recreated all lost changes from handover notes; 62/62 tests passing
 **What was rebuilt:**
 - prompts/registry.py + 8 markdown prompt files (agent1/2/3 + _shared/safety_rules/output_contracts/notes)

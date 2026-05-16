@@ -16,8 +16,8 @@ from prompts.registry import load_prompt
 
 logger = structlog.get_logger()
 
-SURVEY_RADII = [50.0, 100.0, 150.0]
-ORBIT_POINTS = 8
+SURVEY_RADII = [180.0, 300.0]  # visible on map; sensors trigger at first ring
+ORBIT_POINTS = 8               # clean circle, 45° between points
 
 
 def _compute_orbit_point(center_lat, center_lon, radius_m, angle_deg):
@@ -83,6 +83,7 @@ class SurveillanceAgent:
         }
 
         self.target_coords = None
+        self.type_hint = "unknown"
         self.classification_reported = False
         self.sensor_readings = []
 
@@ -95,11 +96,12 @@ class SurveillanceAgent:
 
     async def receive_go(self, payload: dict) -> None:
         self.target_coords = payload["coordinates"]
+        self.type_hint = payload.get("type_hint", "unknown")
         self._running = True
         self.classification_reported = False
         self.sensor_readings = []
-        logger.info("agent1_go_received", coords=self.target_coords)
-        await self._emit("survey_started", self.target_coords)
+        logger.info("agent1_go_received", coords=self.target_coords, type_hint=self.type_hint)
+        await self._emit("survey_started", {"coords": self.target_coords, "type_hint": self.type_hint})
         try:
             await self._run_survey()
         except Exception as e:
@@ -111,13 +113,15 @@ class SurveillanceAgent:
         center_lon = self.target_coords["lon"]
         cruise_alt = 120.0
 
+        await self._emit("nav", f"fly_to({center_lat:.4f}, {center_lon:.4f}, alt={cruise_alt:.0f}m) — transit to incident zone")
         await self._tool_handlers["fly_to"](
             drone_id=self.drone_id, lat=center_lat, lon=center_lon, alt=cruise_alt
         )
         await self._wait_for_arrival(center_lat, center_lon)
-        await self._emit("transit_complete", {"lat": center_lat, "lon": center_lon})
+        await self._emit("on_station", f"Over zone ({center_lat:.4f}, {center_lon:.4f}) at {cruise_alt:.0f}m AGL — commencing survey")
 
-        for radius in SURVEY_RADII:
+        for ring_idx, radius in enumerate(SURVEY_RADII):
+            await self._emit("orbit_started", f"Ring {ring_idx+1}/{len(SURVEY_RADII)} — radius {radius:.0f}m — scanning")
             orbit_readings = []
             for point_idx in range(ORBIT_POINTS):
                 if not self._running:
@@ -128,33 +132,47 @@ class SurveillanceAgent:
                 await self._tool_handlers["fly_to"](
                     drone_id=self.drone_id, lat=pt_lat, lon=pt_lon, alt=cruise_alt
                 )
+                await self._emit("waypoint", f"Point {point_idx+1}/{ORBIT_POINTS} — {angle:.0f}° — ({pt_lat:.4f}, {pt_lon:.4f})")
                 await self._wait_for_arrival(pt_lat, pt_lon)
 
                 reading = await self._tool_handlers["get_sensor_reading"](drone_id=self.drone_id)
                 orbit_readings.append(reading)
                 if reading.get("status") == "ok":
-                    await self._emit("sensor_hit", reading.get("data", {}))
+                    data = reading.get("data", {})
+                    thermal = data.get('thermal_detected', False)
+                    sp = data.get('survivor_probability', 0)
+                    hazards = data.get('hazard_flags', [])
+                    wind = data.get('wind_speed', 0)
+                    vis = data.get('visibility_m', 0)
+                    await self._emit("sensor_reading", f"thermal={'YES' if thermal else 'no'} · surv_prob={sp:.2f} · wind={wind:.1f}m/s · vis={vis:.0f}m · hazards={hazards if hazards else 'none'}")
 
             hits = [r for r in orbit_readings if r.get("status") == "ok"]
             if hits:
                 self.sensor_readings = hits
+                await self._emit("orbit_complete", f"Ring {ring_idx+1} done — {len(hits)}/{ORBIT_POINTS} sensor hits · sufficient data for classification")
+                await self._emit("llm_call", f"Calling claude-haiku-4-5 with tool_choice=report_classification · {len(hits)} sensor readings")
                 await self._classify(center_lat, center_lon, radius, hits)
                 return
+            await self._emit("orbit_complete", f"Ring {ring_idx+1} — no sensor contact · expanding to next radius")
 
         logger.warning("agent1_no_sensor_data", radii_tried=SURVEY_RADII)
-        await self._emit("no_data", {"radii_tried": SURVEY_RADII})
+        await self._emit("no_data", f"No sensor contact after {len(SURVEY_RADII)} rings — reporting best estimate")
 
     async def _classify(self, center_lat, center_lon, radius, sensor_hits) -> None:
         sensor_data = [h.get("data", h) for h in sensor_hits]
         observations = {
             "survey_center": {"lat": center_lat, "lon": center_lon},
             "confirmed_radius_m": radius,
+            "operator_type_hint": self.type_hint,
             "sensor_readings": sensor_data,
         }
         messages = [
             {
                 "role": "user",
-                "content": f"Survey complete. Classify this incident from sensor data:\n{observations}",
+                "content": (
+                    f"Survey complete. The operator's type_hint was '{self.type_hint}' "
+                    f"but classify from sensor data alone — confirm or revise:\n{observations}"
+                ),
             }
         ]
 
@@ -175,14 +193,17 @@ class SurveillanceAgent:
                 }
                 result = await self._tool_handlers["report_classification"](**kwargs_with_hash)
                 self.classification_reported = True
+                cls = block.input.get('classification', '?')
+                conf = block.input.get('confidence', 0)
+                confirmed = block.input.get('confirmed_hint', True)
+                hint_note = '✓ confirmed hint' if confirmed else f'✗ revised from hint'
                 logger.info("agent1_classified", result=result)
-                await self._emit("classified", block.input)
+                await self._emit("classified", f"CLASSIFIED: {cls.upper()} — conf={conf:.0%} — {hint_note}")
 
-                # Fly back to incident center to establish loiter (CP10)
                 await self._tool_handlers["fly_to"](
                     drone_id=self.drone_id, lat=center_lat, lon=center_lon, alt=80.0
                 )
-                await self._emit("loitering", {"lat": center_lat, "lon": center_lon, "alt": 80.0})
+                await self._emit("loitering", f"Loitering over incident at 80m — handing off to Agent 2")
                 break
 
     async def _wait_for_arrival(self, target_lat, target_lon, threshold_m=20.0) -> None:
