@@ -3,6 +3,8 @@ import Map from './Map'
 import CommandDashboard from './CommandDashboard'
 import MapStateManager from './MapStateManager'
 
+const MAX_AGENT_ENTRIES = 150
+
 function deriveSystemStatus(incidents) {
   const vals = Object.values(incidents)
   if (vals.some((i) => i.status === 'EMERGENCY')) return 'EMERGENCY'
@@ -13,20 +15,39 @@ function deriveSystemStatus(incidents) {
 function useReconnectingWS(path, onMessage) {
   const cbRef = useRef(onMessage)
   cbRef.current = onMessage
+  const wsRef = useRef(null)
+  const [connected, setConnected] = useState(false)
+
   useEffect(() => {
-    let ws
     let stopped = false
     function connect() {
       const url = `ws://${window.location.host}${path}`
-      ws = new WebSocket(url)
+      const ws = new WebSocket(url)
+      wsRef.current = ws
+      ws.onopen = () => setConnected(true)
       ws.onmessage = (e) => {
         try { cbRef.current(JSON.parse(e.data)) } catch {}
       }
-      ws.onclose = () => { if (!stopped) setTimeout(connect, 2000) }
+      ws.onclose = () => {
+        setConnected(false)
+        wsRef.current = null
+        if (!stopped) setTimeout(connect, 2000)
+      }
+      ws.onerror = () => ws.close()
     }
     connect()
-    return () => { stopped = true; ws?.close() }
+    return () => { stopped = true; wsRef.current?.close() }
   }, [path])
+
+  const send = useCallback((data) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(data))
+      return true
+    }
+    return false
+  }, [])
+
+  return { connected, send }
 }
 
 function App() {
@@ -34,11 +55,23 @@ function App() {
   const [isSelectingLocation, setIsSelectingLocation] = useState(false)
   const [capturedCoords, setCapturedCoords] = useState(null)
   const [advisory, setAdvisory] = useState(null)
+  const [agentEntries, setAgentEntries] = useState([])
 
   const activeIncidentType = Object.values(incidents)[0]?.type || null
   const systemStatus = deriveSystemStatus(incidents)
 
-  useReconnectingWS('/ws', useCallback((msg) => {
+  const handleAdvisoryUpdate = useCallback((text, timestamp) => {
+    setAdvisory({ text, timestamp })
+  }, [])
+
+  const addAgentEntry = useCallback((entry) => {
+    setAgentEntries((prev) => {
+      const next = [entry, ...prev]
+      return next.length > MAX_AGENT_ENTRIES ? next.slice(0, MAX_AGENT_ENTRIES) : next
+    })
+  }, [])
+
+  const { connected, send } = useReconnectingWS('/ws', useCallback((msg) => {
     // ── Map state ──────────────────────────────────────────────────────
     if (msg.type === 'map_update') {
       MapStateManager.receive(msg)
@@ -60,7 +93,7 @@ function App() {
       }
     }
 
-    // ── Drone telemetry (legacy + new) ─────────────────────────────────
+    // ── Drone telemetry ────────────────────────────────────────────────
     if (msg.type === 'telemetry') {
       MapStateManager.receive({
         type: 'map_update',
@@ -86,12 +119,12 @@ function App() {
       })
     }
 
-    // ── Agent 3 advisory (structured) ─────────────────────────────────
+    // ── Agent 3 advisory ──────────────────────────────────────────────
     if (msg.type === 'advisory' && msg.data) {
       setAdvisory({ text: msg.data, timestamp: new Date().toISOString() })
     }
 
-    // ── Zone circles from Agent 2 ──────────────────────────────────────
+    // ── Zone circles ──────────────────────────────────────────────────
     if (msg.type === 'zones' && Array.isArray(msg.data)) {
       msg.data.forEach((zone) => {
         MapStateManager.receive({
@@ -103,7 +136,7 @@ function App() {
       })
     }
 
-    // ── Survivor markers from Agent 2 ──────────────────────────────────
+    // ── Survivor markers ──────────────────────────────────────────────
     if (msg.type === 'survivors' && Array.isArray(msg.data)) {
       msg.data.forEach((survivor) => {
         MapStateManager.receive({
@@ -122,11 +155,32 @@ function App() {
         })
       })
     }
-  }, []))
 
-  function handleAdvisoryUpdate(text, timestamp) {
-    setAdvisory({ text, timestamp })
-  }
+    // ── Agent stream → pipeline feed ───────────────────────────────────
+    if (msg.type === 'agent_stream') {
+      const d = msg.data || {}
+      const rawId = (d.agent_id || '').toLowerCase()
+      let agent = 'ORCHESTRATOR'
+      if (rawId.startsWith('agent-1')) agent = 'AGENT_1'
+      else if (rawId.startsWith('agent-2')) agent = 'AGENT_2'
+      else if (rawId.startsWith('agent-3')) agent = 'AGENT_3'
+      else if (rawId.startsWith('agent-4')) agent = 'AGENT_4'
+      else if (rawId === 'world') agent = 'ORCHESTRATOR'
+      else if (rawId.includes('orchestrator')) agent = 'ORCHESTRATOR'
+      const content = typeof d.content === 'string' ? d.content : JSON.stringify(d.content)
+      addAgentEntry({
+        id: `${Date.now()}-${Math.random()}`,
+        agent,
+        event: d.event || '',
+        content,
+        ts: new Date().toTimeString().slice(0, 8),
+      })
+      if ((agent === 'AGENT_3' && d.event === 'advisory_issued') || d.event === 'advisory_updated') {
+        const advisoryContent = typeof d.content === 'object' ? d.content : content
+        handleAdvisoryUpdate(advisoryContent, new Date().toISOString())
+      }
+    }
+  }, [addAgentEntry, handleAdvisoryUpdate]))
 
   function handleStartSelectLocation() {
     setIsSelectingLocation(true)
@@ -170,6 +224,9 @@ function App() {
           activeIncidentType={activeIncidentType}
           advisory={advisory}
           onAdvisoryUpdate={handleAdvisoryUpdate}
+          connected={connected}
+          agentEntries={agentEntries}
+          onSendCommand={send}
         />
       </div>
     </div>

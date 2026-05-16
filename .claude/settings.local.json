@@ -5,7 +5,21 @@
       "Bash(git stash *)",
       "Bash(git checkout *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(npm run *)",
+      "Bash(python *)",
+      "Bash(pip install *)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill //F //IM python.exe)",
+      "Bash(npx vite *)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(curl *)",
+      "Bash(cp /c/Users/L125775/githubtset/a22/scalerhack/frontend/index.html /c/Users/L125775/githubtset/ascent/frontend/index.html)",
+      "Bash(cp /c/Users/L125775/githubtset/a22/scalerhack/frontend/package.json /c/Users/L125775/githubtset/ascent/frontend/package.json)",
+      "Bash(cp /c/Users/L125775/githubtset/a22/scalerhack/frontend/src/main.jsx /c/Users/L125775/githubtset/ascent/frontend/src/main.jsx)",
+      "Bash(cp /c/Users/L125775/githubtset/a22/scalerhack/frontend/src/Map.jsx /c/Users/L125775/githubtset/ascent/frontend/src/Map.jsx)",
+      "Bash(cp /c/Users/L125775/githubtset/a22/scalerhack/frontend/src/DroneManager.js /c/Users/L125775/githubtset/ascent/frontend/src/DroneManager.js)",
+      "Bash(npm install *)"
     ]
   }
 }

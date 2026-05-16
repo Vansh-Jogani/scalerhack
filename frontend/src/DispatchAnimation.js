@@ -52,8 +52,41 @@ function arrowSVG(colour) {
   </svg>`
 }
 
-function rotaryDroneSVG(disasterColour, stateColour) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+function droneWithPayloadSVG(disasterColour, stateColour, disasterType) {
+  const type = (disasterType || '').toLowerCase()
+
+  const payloads = {
+    fire: `
+      <line x1="14" y1="28" x2="14" y2="33" stroke="rgba(255,255,255,0.5)" stroke-width="0.8"/>
+      <path d="M12 32 Q14 28.5 16 32 Q16.5 30 14 28 Q11.5 30 12 32Z" fill="#FF8C00"/>
+      <rect x="10.5" y="32" width="7" height="10" rx="1.5" fill="${disasterColour}" stroke="rgba(255,255,255,0.4)" stroke-width="0.5"/>
+      <rect x="10" y="31.5" width="8" height="2" rx="1" fill="#AA0000"/>
+    `,
+    flood: `
+      <line x1="14" y1="28" x2="14" y2="33" stroke="rgba(255,255,255,0.5)" stroke-width="0.8"/>
+      <rect x="9" y="33" width="10" height="9" rx="1.5" fill="#2196F3" stroke="rgba(255,255,255,0.4)" stroke-width="0.5"/>
+      <path d="M9 37 Q11.5 35 14 37 Q16.5 35 19 37" stroke="rgba(255,255,255,0.7)" stroke-width="0.8" fill="none"/>
+    `,
+    structural_collapse: `
+      <line x1="14" y1="28" x2="14" y2="33" stroke="rgba(255,255,255,0.5)" stroke-width="0.8"/>
+      <rect x="9" y="33" width="10" height="9" rx="1" fill="#FF8C42" stroke="rgba(255,255,255,0.4)" stroke-width="0.5"/>
+      <text x="14" y="41" text-anchor="middle" fill="white" font-family="monospace" font-size="5" font-weight="bold">SOS</text>
+    `,
+    industrial_hazard: `
+      <line x1="14" y1="28" x2="14" y2="33" stroke="rgba(255,255,255,0.5)" stroke-width="0.8"/>
+      <polygon points="14,33 9,42 19,42" fill="#9E9E9E" stroke="rgba(255,255,255,0.4)" stroke-width="0.5"/>
+      <text x="14" y="41" text-anchor="middle" fill="#FFE566" font-family="monospace" font-size="7" font-weight="bold">!</text>
+    `,
+    maritime_sar: `
+      <line x1="14" y1="28" x2="14" y2="33" stroke="rgba(255,255,255,0.5)" stroke-width="0.8"/>
+      <circle cx="14" cy="38" r="5" fill="none" stroke="#00CED1" stroke-width="2.5"/>
+      <circle cx="14" cy="38" r="2" fill="#00CED1"/>
+    `,
+  }
+
+  const payload = payloads[type] || payloads.fire
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="48" viewBox="0 0 28 48">
     <line x1="14" y1="14" x2="20" y2="8"  stroke="white" stroke-width="1.5" stroke-linecap="round"/>
     <line x1="14" y1="14" x2="8"  y2="8"  stroke="white" stroke-width="1.5" stroke-linecap="round"/>
     <line x1="14" y1="14" x2="20" y2="20" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
@@ -64,6 +97,7 @@ function rotaryDroneSVG(disasterColour, stateColour) {
     <circle cx="8"  cy="20" r="4" fill="${disasterColour}" stroke="white" stroke-width="0.5"/>
     <circle cx="14" cy="14" r="4" fill="white"/>
     <circle cx="14" cy="14" r="2.5" fill="${stateColour}"/>
+    ${payload}
   </svg>`
 }
 
@@ -87,6 +121,7 @@ class DispatchAnimation {
     this._type        = disasterType
 
     this._rafId       = null
+    this._launchTimer = null
     this._completeCb  = null
 
     this._fwEl        = null
@@ -102,8 +137,6 @@ class DispatchAnimation {
     this._droneEls       = []
     this._droneMarkers   = []
     this._droneAngles    = []
-    this._droneTrails    = []
-    this._droneTrailPts  = []
     this._patrolCenters  = []
 
     this._assessPanel = null
@@ -119,15 +152,14 @@ class DispatchAnimation {
 
   stop() {
     if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null }
+    if (this._launchTimer) { clearTimeout(this._launchTimer); this._launchTimer = null }
     if (this._fwMarker) { this._map.removeLayer(this._fwMarker); this._fwMarker = null }
     if (this._fwTrail) { this._map.removeLayer(this._fwTrail); this._fwTrail = null }
     if (this._arrowMarker) { this._map.removeLayer(this._arrowMarker); this._arrowMarker = null }
     if (this._dispatchTrail) { this._map.removeLayer(this._dispatchTrail); this._dispatchTrail = null }
     for (const m of this._droneMarkers) this._map.removeLayer(m)
-    for (const t of this._droneTrails) this._map.removeLayer(t)
     for (const c of this._burstCircles) this._map.removeLayer(c)
     this._droneMarkers = []
-    this._droneTrails = []
     this._droneEls = []
     this._burstCircles = []
     if (this._assessPanel?.parentNode) {
@@ -352,7 +384,7 @@ class DispatchAnimation {
     if (this._arrowMarker) { this._map.removeLayer(this._arrowMarker); this._arrowMarker = null }
     if (this._fwEl) this._fwEl.style.opacity = '0.4'
 
-    fireAgentEvent('AGENT_2', 'Swarm on target — establishing patrol pattern')
+    fireAgentEvent('AGENT_2', `Swarm inbound from ${this._src.name || 'response centre'} — ${this._N} drones en route`)
 
     const burstStart = performance.now()
     const ring1 = L.circle([this._dst.lat, this._dst.lon], {
@@ -392,51 +424,51 @@ class DispatchAnimation {
         lat: this._dst.lat + Math.sin(angle) * 0.0006,
       })
       this._droneAngles.push(angle)
-      this._droneTrailPts.push([])
 
-      const trail = L.polyline([], {
-        color: this._colour, weight: 1, dashArray: '3 3', opacity: 0.35,
-      }).addTo(this._map)
-      this._droneTrails.push(trail)
-
-      const droneHtml = `<div class="dispatch-drone" style="width:28px;height:28px;transform:scale(0.3);opacity:0;transition:transform 600ms ease-out, opacity 600ms ease-out">${rotaryDroneSVG(this._colour, '#00FF88')}</div>`
-      const droneIcon = L.divIcon({ className: '', html: droneHtml, iconSize: [28, 28], iconAnchor: [14, 14] })
-      const marker = L.marker([this._dst.lat, this._dst.lon], { icon: droneIcon, interactive: false }).addTo(this._map)
+      const droneHtml = `<div class="dispatch-drone" style="width:28px;height:48px;transform:scale(0.4);opacity:0;transition:transform 400ms ease-out, opacity 400ms ease-out">${droneWithPayloadSVG(this._colour, '#00FF88', this._type)}</div>`
+      const droneIcon = L.divIcon({ className: '', html: droneHtml, iconSize: [28, 48], iconAnchor: [14, 14] })
+      const marker = L.marker([this._src.lat, this._src.lon], { icon: droneIcon, interactive: false }).addTo(this._map)
       this._droneMarkers.push(marker)
 
       const el = marker.getElement()?.querySelector('.dispatch-drone') || null
       this._droneEls.push(el)
 
-      requestAnimationFrame(() => {
+      // staggered pop-in at the response centre before departing
+      const delay = i * 120
+      setTimeout(() => {
         if (el) { el.style.transform = 'scale(1)'; el.style.opacity = '1' }
-      })
+      }, delay)
     }
 
-    const moveStart = performance.now()
-    const centLat = this._dst.lat, centLon = this._dst.lon
+    // brief hold at centre so drones are visible before launch
+    this._launchTimer = setTimeout(() => {
+      this._launchTimer = null
+      const moveStart = performance.now()
+      const srcLat = this._src.lat, srcLon = this._src.lon
 
-    const moveTick = (now) => {
-      const t = Math.min((now - moveStart) / 800, 1)
-      const te = ease(t)
+      const moveTick = (now) => {
+        const t = Math.min((now - moveStart) / 2500, 1)
+        const te = ease(t)
 
-      for (let i = 0; i < this._N; i++) {
-        const pc = this._patrolCenters[i]
-        const lat = centLat + (pc.lat - centLat) * te
-        const lon = centLon + (pc.lon - centLon) * te
-        this._droneMarkers[i].setLatLng([lat, lon])
+        for (let i = 0; i < this._N; i++) {
+          const pc = this._patrolCenters[i]
+          const lat = srcLat + (pc.lat - srcLat) * te
+          const lon = srcLon + (pc.lon - srcLon) * te
+          this._droneMarkers[i].setLatLng([lat, lon])
+        }
+
+        this._advanceFwOrbit()
+
+        if (t < 1) {
+          this._rafId = requestAnimationFrame(moveTick)
+        } else {
+          for (const el of this._droneEls) { if (el) el.style.transition = 'none' }
+          this._rafId = null
+          this._phase6_patrol()
+        }
       }
-
-      this._advanceFwOrbit()
-
-      if (t < 1) {
-        this._rafId = requestAnimationFrame(moveTick)
-      } else {
-        for (const el of this._droneEls) { if (el) el.style.transition = 'none' }
-        this._rafId = null
-        this._phase6_patrol()
-      }
-    }
-    this._rafId = requestAnimationFrame(moveTick)
+      this._rafId = requestAnimationFrame(moveTick)
+    }, this._N * 120 + 300)
   }
 
   // ── Phase 6: Continuous patrol ────────────────────────────────────────────
@@ -462,10 +494,6 @@ class DispatchAnimation {
 
         const hDeg = (a + (dir > 0 ? Math.PI / 2 : -Math.PI / 2)) * 180 / Math.PI
         if (this._droneEls[i]) this._droneEls[i].style.transform = `rotate(${hDeg}deg)`
-
-        this._droneTrailPts[i].push([lat, lon])
-        if (this._droneTrailPts[i].length > 20) this._droneTrailPts[i].shift()
-        this._droneTrails[i].setLatLngs(this._droneTrailPts[i])
       }
 
       this._rafId = requestAnimationFrame(tick)

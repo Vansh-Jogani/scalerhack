@@ -47,6 +47,10 @@ class WorldState:
 
     # ── Markers ──────────────────────────────────────────────────────────
 
+    def add_marker(self, marker: "Marker") -> None:
+        self.markers = [m for m in self.markers if m.id != marker.id]
+        self.markers.append(marker)
+
     def get_markers(self) -> List[Marker]:
         return self.markers
 
@@ -84,6 +88,16 @@ class WorldState:
         )
         self.drones[drone_id] = drone
         return drone
+
+    def reposition_drone(self, drone_id: str, lat: float, lon: float, alt: float = 0.0) -> bool:
+        """Teleport a drone to a new position without changing its state (IDLE stays IDLE)."""
+        if drone_id not in self.drones:
+            return False
+        drone = self.drones[drone_id]
+        drone.lat = lat
+        drone.lon = lon
+        drone.alt = alt
+        return True
 
     def command_drone(self, drone_id: str, lat: float, lon: float, alt: float) -> bool:
         if drone_id not in self.drones:

@@ -11,3 +11,7 @@ Agent 2 — report_findings required fields:
 Agent 3 — issue_advisory required fields:
   situation_summary, immediate_actions (max 5), exclusion_zones[],
   resource_requirements[], risk_flags[], monitoring_status, last_updated, based_on
+
+Agent 4 — coordinate_relief required fields:
+  incident_id, relief_type, actions[].priority, actions[].action,
+  drone_waypoints[].lat, drone_waypoints[].lon, alerts[], resource_requests[], status

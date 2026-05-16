@@ -12,6 +12,7 @@ class Telemetry:
     speed: float
     state: str
     battery_pct: float
+    drone_type: str = "fixed_wing"
 
 
 class DroneInterface(ABC):

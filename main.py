@@ -99,7 +99,6 @@ async def broadcast_loop():
     while True:
         if connected_clients and world_state:
             telemetry = world_state.get_all_telemetry()
-            markers = [m.model_dump() for m in world_state.get_markers()]
             zones = world_state.get_zones()
             survivors = world_state.get_survivor_markers()
 
@@ -107,7 +106,6 @@ async def broadcast_loop():
                 try:
                     for t in telemetry:
                         await ws.send_json({"type": "telemetry", "data": t})
-                    await ws.send_json({"type": "markers", "data": markers})
                     if zones:
                         await ws.send_json({"type": "zones", "data": zones})
                     if survivors:

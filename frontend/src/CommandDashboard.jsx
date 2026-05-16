@@ -1,6 +1,26 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { DISASTER_COLORS, DISASTER_LABELS, DISASTER_TYPES, SEVERITY_LEVELS, DISASTER_COLOR_MAP } from './constants.js'
 import { setDrawColor, clearDrawPolygon } from './Map.jsx'
+import responseCentres from './data/response_centres.json'
+import { findNearestCentre } from './DispatchAnimation.js'
+
+function formatContent(raw) {
+  try {
+    const obj = typeof raw === 'string' ? JSON.parse(raw) : raw
+    if (typeof obj !== 'object' || obj === null) return raw
+    return Object.entries(obj).map(([k, v]) => {
+      const val = typeof v === 'object' ? JSON.stringify(v) : String(v)
+      return (
+        <div key={k} style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <span style={{ color: '#7A9AB8', flexShrink: 0 }}>{k}</span>
+          <span style={{ color: '#FFFFFF', wordBreak: 'break-all' }}>{val}</span>
+        </div>
+      )
+    })
+  } catch {
+    return <span style={{ color: '#FFFFFF' }}>{raw}</span>
+  }
+}
 
 const SEV_COLORS = { LOW: '#FFE566', MEDIUM: '#FFAA00', HIGH: '#FF5500', CRITICAL: '#CC1A1A' }
 
@@ -14,17 +34,18 @@ const AGENT_LABELS = {
   AGENT_1:      'A-1',
   AGENT_2:      'A-2',
   AGENT_3:      'A-3',
+  AGENT_4:      'A-4',
 }
 
 const AGENT_COLORS = {
   AGENT_1: '#7B68EE',
   AGENT_2: null,
   AGENT_3: '#00FF88',
-  ORCHESTRATOR: '#4A5568',
+  AGENT_4: '#FF6B35',
+  ORCHESTRATOR: '#6A8AAA',
 }
 
 const MAX_ENTRIES = 150
-const BACKOFF = [1000, 2000, 4000, 8000, 30000]
 
 // ─── sub-component: section label ───────────────────────────────────────────
 
@@ -41,7 +62,7 @@ function SectionLabel({ children, right }) {
         fontFamily: 'var(--font-display)',
         letterSpacing: '0.14em',
         textTransform: 'uppercase',
-        color: '#7A8FA8',
+        color: '#A8BECE',
       }}>{children}</span>
       {right && <span style={{ fontSize: 9, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>{right}</span>}
     </div>
@@ -56,13 +77,13 @@ function Advisory({ advisory }) {
       padding: '10px 0',
       fontFamily: 'var(--font-mono)',
       fontSize: 10,
-      color: '#4A6A8A',
+      color: '#7A9AB8',
       letterSpacing: '0.06em',
       display: 'flex',
       alignItems: 'center',
       gap: 6,
     }}>
-      <span style={{ color: '#4A6A8A' }}>▮</span>
+      <span style={{ color: '#7A9AB8' }}>▮</span>
       AWAITING AGENT 3 REPORT
     </div>
   )
@@ -73,7 +94,7 @@ function Advisory({ advisory }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {advisory.timestamp && (
-        <div style={{ fontSize: 9, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+        <div style={{ fontSize: 9, color: '#7A9AB8', fontFamily: 'var(--font-mono)' }}>
           {new Date(advisory.timestamp).toLocaleTimeString()}
         </div>
       )}
@@ -82,9 +103,9 @@ function Advisory({ advisory }) {
         <p style={{
           margin: 0,
           fontFamily: 'var(--font-mono)',
-          fontSize: 11,
-          color: 'var(--text-primary)',
-          lineHeight: 1.7,
+          fontSize: 12,
+          color: '#FFFFFF',
+          lineHeight: 1.8,
           whiteSpace: 'pre-wrap',
         }}>{text}</p>
       )}
@@ -92,7 +113,7 @@ function Advisory({ advisory }) {
       {structured && (
         <>
           {structured.situation_summary && (
-            <AdvisoryBlock label="Situation" color="var(--text-primary)">
+            <AdvisoryBlock label="Situation" color="#A8BECE">
               {structured.situation_summary}
             </AdvisoryBlock>
           )}
@@ -121,7 +142,7 @@ function Advisory({ advisory }) {
               {structured.exclusion_zones.map((z, i) => (
                 <div key={i} style={{ color: '#FF3B3B' }}>
                   {z.radius_m}m @ {z.lat?.toFixed(4)}, {z.lon?.toFixed(4)}
-                  {z.reason && <span style={{ color: 'var(--text-secondary)' }}> — {z.reason}</span>}
+                  {z.reason && <span style={{ color: '#A8BECE' }}> — {z.reason}</span>}
                 </div>
               ))}
             </AdvisoryBlock>
@@ -130,7 +151,7 @@ function Advisory({ advisory }) {
             <AdvisoryBlock label="Resources">
               {structured.resource_requirements.map((r, i) => (
                 <div key={i} style={{ display: 'flex', gap: 5 }}>
-                  <span style={{ color: '#5A7A9A' }}>·</span>
+                  <span style={{ color: '#8AA0B4' }}>·</span>
                   <span>{r}</span>
                 </div>
               ))}
@@ -153,14 +174,14 @@ function AdvisoryBlock({ label, color, children }) {
         fontFamily: 'var(--font-display)',
         letterSpacing: '0.12em',
         textTransform: 'uppercase',
-        color: color || 'var(--text-secondary)',
+        color: color || '#A8BECE',
         marginBottom: 4,
       }}>{label}</div>
       <div style={{
         fontFamily: 'var(--font-mono)',
-        fontSize: 11,
-        color: 'var(--text-primary)',
-        lineHeight: 1.65,
+        fontSize: 12,
+        color: '#FFFFFF',
+        lineHeight: 1.7,
       }}>{children}</div>
     </div>
   )
@@ -175,6 +196,9 @@ export default function CommandDashboard({
   activeIncidentType,
   advisory,
   onAdvisoryUpdate,
+  connected,
+  agentEntries,
+  onSendCommand,
 }) {
   // ── Command state ──
   const [coords, setCoords] = useState(null)
@@ -182,16 +206,9 @@ export default function CommandDashboard({
   const [selectedSeverity, setSelectedSeverity] = useState(null)
   const [deployStatus, setDeployStatus] = useState('idle')
 
-  // ── Agent feed state ──
-  const [entries, setEntries] = useState([])
-  const [connected, setConnected] = useState(false)
-  const wsRef = useRef(null)
-  const retryRef = useRef(0)
-  const timerRef = useRef(null)
-  const feedRef = useRef(null)
-
   // ── Tab state ──
   const [tab, setTab] = useState('pipeline') // 'pipeline' | 'advisory'
+  const feedRef = useRef(null)
 
   // ── Sync captured coords ──
   useEffect(() => { if (capturedCoords) setCoords(capturedCoords) }, [capturedCoords])
@@ -199,64 +216,6 @@ export default function CommandDashboard({
   // ── Sync circle colour ──
   useEffect(() => { if (selectedType) setDrawColor(DISASTER_COLORS[selectedType]) }, [selectedType])
 
-  // ── WebSocket ──
-  const addEntry = useCallback((entry) => {
-    setEntries((prev) => {
-      const next = [entry, ...prev]
-      return next.length > MAX_ENTRIES ? next.slice(0, MAX_ENTRIES) : next
-    })
-  }, [])
-
-  const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return
-    const ws = new WebSocket(`ws://${window.location.host}/ws`)
-    wsRef.current = ws
-
-    ws.onopen = () => { setConnected(true); retryRef.current = 0 }
-
-    ws.onmessage = (evt) => {
-      try {
-        const msg = JSON.parse(evt.data)
-        if (msg.type !== 'agent_stream') return
-        const d = msg.data || {}
-        const rawId = (d.agent_id || '').toLowerCase()
-        let agent = 'ORCHESTRATOR'
-        if (rawId.startsWith('agent-1')) agent = 'AGENT_1'
-        else if (rawId.startsWith('agent-2')) agent = 'AGENT_2'
-        else if (rawId.startsWith('agent-3')) agent = 'AGENT_3'
-        else if (rawId === 'world') agent = 'ORCHESTRATOR'
-        else if (rawId.includes('orchestrator')) agent = 'ORCHESTRATOR'
-        const content = typeof d.content === 'string' ? d.content : JSON.stringify(d.content)
-        addEntry({
-          id: `${Date.now()}-${Math.random()}`,
-          agent,
-          event: d.event || '',
-          content,
-          ts: new Date().toTimeString().slice(0, 8),
-        })
-        if ((agent === 'AGENT_3' && d.event === 'advisory_issued') || d.event === 'advisory_updated') {
-          const advisoryContent = typeof d.content === 'object' ? d.content : content
-          if (onAdvisoryUpdate) onAdvisoryUpdate(advisoryContent, new Date().toISOString())
-          setTab('advisory')
-        }
-      } catch {}
-    }
-
-    ws.onclose = () => {
-      setConnected(false)
-      wsRef.current = null
-      const delay = BACKOFF[Math.min(retryRef.current, BACKOFF.length - 1)]
-      retryRef.current += 1
-      timerRef.current = setTimeout(connect, delay)
-    }
-
-    ws.onerror = () => ws.close()
-  }, [addEntry, onAdvisoryUpdate])
-
-  useEffect(() => {
-    connect()
-    return () => { clearTimeout(timerRef.current); wsRef.current?.close() }
-  }, [connect])
 
   // ── Deploy ──
   const hasZone = coords?.radius_m > 0
@@ -267,16 +226,10 @@ export default function CommandDashboard({
 
   async function deploy() {
     if (!canDeploy) return
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      setDeployStatus('failed')
-      setTimeout(() => setDeployStatus('idle'), 3000)
-      return
-    }
-    setDeployStatus('dispatching')
-    try {
-      wsRef.current.send(JSON.stringify({
-        type: 'command',
-        action: 'go',
+    const nearest = findNearestCentre([[coords.lon, coords.lat]], responseCentres)
+    const sent = onSendCommand({
+      type: 'command',
+      action: 'go',
         data: {
           area: {
             center: { lat: coords.lat, lon: coords.lon },
@@ -285,11 +238,13 @@ export default function CommandDashboard({
           },
           disaster_type: selectedType.toLowerCase(),
           severity: selectedSeverity.toLowerCase(),
+          dispatch_from: nearest ? { name: nearest.name, lat: nearest.lat, lon: nearest.lon } : null,
         },
-      }))
+      })
+    if (sent) {
       setDeployStatus('active')
       setTimeout(() => setDeployStatus('idle'), 4000)
-    } catch {
+    } else {
       setDeployStatus('failed')
       setTimeout(() => setDeployStatus('idle'), 3000)
     }
@@ -326,7 +281,7 @@ export default function CommandDashboard({
           fontSize: 9,
           fontFamily: 'var(--font-mono)',
           letterSpacing: '0.06em',
-          color: connected ? 'var(--success)' : '#2A3545',
+          color: connected ? 'var(--success)' : 'var(--critical)',
         }}>
           {connected ? '● LIVE' : '○ OFFLINE'}
         </span>
@@ -352,7 +307,7 @@ export default function CommandDashboard({
               background: isSelectingLocation ? `${accent}12` : 'transparent',
               border: `1px solid ${isSelectingLocation ? accent : 'var(--border)'}`,
               borderRadius: 3,
-              color: isSelectingLocation ? accent : 'var(--text-secondary)',
+              color: isSelectingLocation ? accent : '#C0CDD9',
               fontFamily: 'var(--font-display)',
               fontSize: 11,
               fontWeight: 600,
@@ -382,27 +337,27 @@ export default function CommandDashboard({
             <div style={{
               marginTop: 6,
               padding: '6px 10px',
-              background: '#0A0E14',
-              border: `1px solid ${hasZone ? accent : 'var(--border)'}`,
+              background: '#111822',
+              border: `1px solid ${hasZone ? accent : '#3A5070'}`,
               borderRadius: 3,
               fontFamily: 'var(--font-mono)',
               fontSize: 10,
-              color: 'var(--text-primary)',
+              color: '#FFFFFF',
               letterSpacing: '0.04em',
               lineHeight: 1.9,
             }}>
-              <span style={{ color: 'var(--text-secondary)' }}>LAT  </span>{coords.lat.toFixed(5)}
+              <span style={{ color: '#7A9AB8' }}>LAT  </span>{coords.lat.toFixed(5)}
               {'  '}
-              <span style={{ color: 'var(--text-secondary)' }}>LON  </span>{coords.lon.toFixed(5)}
+              <span style={{ color: '#7A9AB8' }}>LON  </span>{coords.lon.toFixed(5)}
               {hasZone && (<><br />
-                <span style={{ color: 'var(--text-secondary)' }}>RAD  </span>
+                <span style={{ color: '#7A9AB8' }}>RAD  </span>
                 {coords.radius_m >= 1000 ? (coords.radius_m / 1000).toFixed(2) + ' km' : coords.radius_m + ' m'}
               </>)}
             </div>
           )}
 
           {isSelectingLocation && !coords && (
-            <div style={{ marginTop: 5, fontSize: 10, color: '#2A3545', fontFamily: 'var(--font-mono)' }}>
+            <div style={{ marginTop: 5, fontSize: 10, color: '#8AA0B4', fontFamily: 'var(--font-mono)' }}>
               Click map to set centre
             </div>
           )}
@@ -418,10 +373,10 @@ export default function CommandDashboard({
                 onClick={() => setSelectedType(key)}
                 style={{
                   padding: '4px 9px',
-                  background: selectedType === key ? `${color}22` : `${color}08`,
-                  border: `1px solid ${selectedType === key ? color : `${color}44`}`,
+                  background: selectedType === key ? `${color}22` : `${color}10`,
+                  border: `1px solid ${selectedType === key ? color : `${color}66`}`,
                   borderRadius: 2,
-                  color: selectedType === key ? color : `${color}88`,
+                  color: selectedType === key ? color : `${color}BB`,
                   fontFamily: 'var(--font-display)',
                   fontSize: 10,
                   fontWeight: 600,
@@ -446,10 +401,10 @@ export default function CommandDashboard({
                 <button key={sev} onClick={() => setSelectedSeverity(sev)} style={{
                   flex: 1,
                   padding: '5px 0',
-                  background: active ? `${c}22` : `${c}08`,
-                  border: `1px solid ${active ? c : `${c}44`}`,
+                  background: active ? `${c}22` : `${c}10`,
+                  border: `1px solid ${active ? c : `${c}66`}`,
                   borderRadius: 2,
-                  color: active ? c : `${c}88`,
+                  color: active ? c : `${c}BB`,
                   fontFamily: 'var(--font-display)',
                   fontSize: 9,
                   fontWeight: 600,
@@ -473,7 +428,7 @@ export default function CommandDashboard({
             background: canDeploy ? accent : '#0A0E14',
             border: `1px solid ${canDeploy ? accent : '#1A2535'}`,
             borderRadius: 3,
-            color: canDeploy ? '#0A0E14' : '#4A6A8A',
+            color: canDeploy ? '#0A0E14' : '#7A9AB8',
             fontFamily: 'var(--font-display)',
             fontSize: 11,
             fontWeight: 700,
@@ -534,21 +489,21 @@ export default function CommandDashboard({
             padding: '4px 0',
           }}
         >
-          {!connected && entries.length === 0 && (
+          {!connected && agentEntries.length === 0 && (
             <div style={{
               padding: '14px',
               fontFamily: 'var(--font-mono)',
               fontSize: 10,
-              color: '#4A6A8A',
+              color: '#7A9AB8',
               letterSpacing: '0.05em',
             }}>○  AWAITING BACKEND</div>
           )}
-          {connected && entries.length === 0 && (
+          {connected && agentEntries.length === 0 && (
             <div style={{
               padding: '14px',
               fontFamily: 'var(--font-mono)',
               fontSize: 10,
-              color: '#4A6A8A',
+              color: '#7A9AB8',
               display: 'flex',
               gap: 6,
             }}>
@@ -557,23 +512,44 @@ export default function CommandDashboard({
             </div>
           )}
 
-          {entries.map((e) => {
+          {agentEntries.map((e) => {
             const agentColor = e.agent === 'AGENT_2' && activeIncidentType
               ? DISASTER_COLOR_MAP[activeIncidentType] || '#FFB800'
               : AGENT_COLORS[e.agent] || null
+
+            const isDecision = e.event === 'decision'
+            const isDispatch = e.event === 'dispatch'
+            const isReasoning = e.event === 'reasoning' || e.event === 'rationale'
+            const isClassified = e.event === 'classified'
+            const isSensorHit = e.event === 'sensor_hit'
+            const isOrbit = e.event === 'orbit_started' || e.event === 'ring_complete' || e.event === 'ring_clear'
+            const isRelief = e.agent === 'AGENT_4' && (e.event === 'relief_started' || e.event === 'drone_tasked' || e.event === 'alert_broadcast')
+
+            const borderColor = isDispatch ? '#00FF88'
+              : isDecision ? '#FFB800'
+              : isRelief ? '#FF6B35'
+              : isClassified ? '#00FF88'
+              : isSensorHit ? '#00CC66'
+              : isOrbit ? '#3A5A7A'
+              : agentColor || 'transparent'
+
             return (
               <div key={e.id} style={{
                 display: 'flex',
                 alignItems: 'baseline',
                 gap: 8,
-                padding: '5px 14px',
-                borderLeft: `2px solid ${agentColor || 'transparent'}`,
+                padding: (isDecision || isDispatch || isRelief) ? '7px 14px' : '5px 14px',
+                borderLeft: `2px solid ${borderColor}`,
                 borderBottom: '1px solid rgba(255,255,255,0.025)',
+                background: isDispatch ? 'rgba(0,255,136,0.06)'
+                  : isRelief ? 'rgba(255,107,53,0.06)'
+                  : isDecision ? 'rgba(255,184,0,0.05)'
+                  : 'transparent',
               }}>
                 <span style={{
                   fontSize: 9,
                   fontFamily: 'var(--font-mono)',
-                  color: '#4A6A8A',
+                  color: '#6A8AA8',
                   flexShrink: 0,
                   letterSpacing: '0.02em',
                 }}>{e.ts}</span>
@@ -581,27 +557,39 @@ export default function CommandDashboard({
                   fontSize: 9,
                   fontFamily: 'var(--font-display)',
                   letterSpacing: '0.1em',
-                  color: agentColor || '#5A7A9A',
+                  color: agentColor || '#7A9AB8',
                   fontWeight: 600,
                   flexShrink: 0,
                   minWidth: 28,
                 }}>{AGENT_LABELS[e.agent] || e.agent}</span>
-                {e.event && (
+                {e.event && !isReasoning && (
                   <span style={{
                     fontSize: 9,
                     fontFamily: 'var(--font-display)',
                     letterSpacing: '0.08em',
-                    color: '#4A6A8A',
+                    color: isDispatch ? '#00FF88'
+                      : isDecision ? '#FFB800'
+                      : isClassified ? '#00CC66'
+                      : '#7A9AB8',
                     flexShrink: 0,
                   }}>{e.event}</span>
                 )}
-                <span style={{
-                  fontSize: 11,
+                <div style={{
+                  fontSize: (isDecision || isDispatch || isRelief) ? 12 : isReasoning ? 10 : 11,
                   fontFamily: 'var(--font-mono)',
-                  color: 'var(--text-primary)',
-                  lineHeight: 1.5,
+                  color: isDispatch ? '#00FF88'
+                    : isRelief ? '#FF6B35'
+                    : isReasoning ? '#5A7A9A'
+                    : isClassified ? '#00FF88'
+                    : isSensorHit ? '#7FFFD4'
+                    : isOrbit ? '#4A7A9A'
+                    : '#FFFFFF',
+                  lineHeight: 1.6,
                   wordBreak: 'break-word',
-                }}>{e.content}</span>
+                  fontStyle: isReasoning ? 'italic' : 'normal',
+                  fontWeight: (isDecision || isDispatch || isRelief) ? 700 : 'normal',
+                  flex: 1,
+                }}>{formatContent(e.content)}</div>
               </div>
             )
           })}

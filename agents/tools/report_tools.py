@@ -58,6 +58,71 @@ def create_report_classification_handler(orchestrator):
     return report_classification
 
 
+REQUEST_BACKUP_TOOL = {
+    "name": "request_backup",
+    "description": "Request deployment of a specialist swarm. Call when confirmed incident warrants specialist response.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "swarm_type": {
+                "type": "string",
+                "enum": ["fire", "structural_collapse", "flood", "industrial_hazard", "maritime_sar"],
+                "description": "Specialist swarm configuration to deploy",
+            },
+            "urgency": {
+                "type": "string",
+                "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+                "description": "Deployment urgency based on observed conditions",
+            },
+            "rationale": {
+                "type": "string",
+                "description": "Plain-language explanation for the request",
+            },
+            "estimated_casualties": {
+                "type": "integer",
+                "description": "Estimated persons at risk (0 if unknown)",
+            },
+        },
+        "required": ["swarm_type", "urgency", "rationale", "estimated_casualties"],
+    },
+}
+
+MAINTAIN_SURVEILLANCE_TOOL = {
+    "name": "maintain_surveillance",
+    "description": "Continue loitering without requesting backup. Use when situation is ambiguous or below deployment threshold.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "reason": {
+                "type": "string",
+                "description": "Why specialist deployment is not yet warranted",
+            },
+            "reassess_in_seconds": {
+                "type": "integer",
+                "description": "Seconds before automatic reassessment",
+                "minimum": 10,
+                "maximum": 300,
+            },
+        },
+        "required": ["reason", "reassess_in_seconds"],
+    },
+}
+
+
+def create_request_backup_handler(orchestrator):
+    async def request_backup(**kwargs) -> dict:
+        orchestrator.receive_agent1_decision({**kwargs, "name": "request_backup"})
+        return {"status": "ok", "message": f"Backup request received: {kwargs.get('swarm_type')} swarm"}
+    return request_backup
+
+
+def create_maintain_surveillance_handler(orchestrator):
+    async def maintain_surveillance(**kwargs) -> dict:
+        orchestrator.receive_agent1_decision({**kwargs, "name": "maintain_surveillance"})
+        return {"status": "ok", "message": f"Surveillance maintained. Reassess in {kwargs.get('reassess_in_seconds')}s"}
+    return maintain_surveillance
+
+
 ISSUE_ADVISORY_TOOL = {
     "name": "issue_advisory",
     "description": "Issue a structured advisory for first responders.",

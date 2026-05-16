@@ -144,6 +144,8 @@ class SpecialistAgent:
         classification: str,
         incident_id: str = "",
         stream_callback=None,
+        staging_lat: float | None = None,
+        staging_lon: float | None = None,
     ):
         self.agent_id = agent_id
         self.model = model
@@ -153,6 +155,8 @@ class SpecialistAgent:
         self.classification = classification
         self.incident_id = incident_id
         self.stream_callback = stream_callback
+        self.staging_lat = staging_lat
+        self.staging_lon = staging_lon
         self.client = AsyncAnthropic()
         self._running = False
         self._readings: dict[str, list] = {}
@@ -213,10 +217,11 @@ class SpecialistAgent:
             drone_type = "rotary"
 
         num_drones = self.swarm_config["drones"]
-        staging_lat = center_lat + 0.009
+        staging_lat = self.staging_lat if self.staging_lat is not None else center_lat + 0.009
+        staging_lon = self.staging_lon if self.staging_lon is not None else center_lon
         for i in range(num_drones):
             drone_id = f"swarm-{self.agent_id}-{i}"
-            offset_lon = center_lon + (i - num_drones // 2) * 0.0008
+            offset_lon = staging_lon + (i - num_drones // 2) * 0.0008
             self.world_state.add_drone(drone_id, drone_type, staging_lat, offset_lon)
             self.drone_ids.append(drone_id)
             self._readings[drone_id] = []

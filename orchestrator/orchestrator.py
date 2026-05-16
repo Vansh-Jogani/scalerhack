@@ -1,6 +1,6 @@
 """ARIA Orchestrator — LangGraph state machine with SQLite checkpointer.
 
-Graph: START → surveillance_node → swarm_node → advisory_node → END
+Graph: START → surveillance_node → swarm_node → relief_node → advisory_node → END
 Agent callbacks resolve asyncio Futures to bridge event-driven agents into LangGraph nodes.
 State checkpointed to aria_checkpoints.db after each node.
 """
@@ -21,6 +21,7 @@ class ARIAState(TypedDict):
     go_payload: dict
     agent1_report: Optional[dict]
     agent2_findings: Optional[dict]
+    relief_plan: Optional[dict]
     advisory: Optional[dict]
     error: Optional[str]
 
@@ -42,22 +43,27 @@ class ARIAOrchestrator:
         model_a1: str = "claude-haiku-4-5-20251001",
         model_a2: str = "claude-haiku-4-5-20251001",
         model_a3: str = "claude-haiku-4-5-20251001",
+        model_a4: str = "claude-haiku-4-5-20251001",
     ) -> None:
         self.world_state = world_state
         self.sensor_overlay = sensor_overlay
         self.model_a1 = model_a1
         self.model_a2 = model_a2
         self.model_a3 = model_a3
+        self.model_a4 = model_a4
         self.state = "STANDBY"
         self.active_incident: dict | None = None
         self.event_callback = None
         self.agent1_report: dict | None = None
         self.agent2_report: dict | None = None
+        self.agent4_report: dict | None = None
         self._agent1_future: asyncio.Future | None = None
         self._agent2_future: asyncio.Future | None = None
+        self._agent4_future: asyncio.Future | None = None
         self.event_bus = EventBus()
         self.latest_briefing = None
         self._graph = None
+        self._agent1_decision: dict | None = None
 
     def set_event_callback(self, callback) -> None:
         self.event_callback = callback
@@ -69,10 +75,12 @@ class ARIAOrchestrator:
         builder = StateGraph(ARIAState)
         builder.add_node("surveillance", self._surveillance_node)
         builder.add_node("swarm", self._swarm_node)
+        builder.add_node("relief", self._relief_node)
         builder.add_node("advisory", self._advisory_node)
         builder.add_edge(START, "surveillance")
         builder.add_edge("surveillance", "swarm")
-        builder.add_edge("swarm", "advisory")
+        builder.add_edge("swarm", "relief")
+        builder.add_edge("relief", "advisory")
         builder.add_edge("advisory", END)
         self._graph = builder.compile(checkpointer=checkpointer)
         logger.info("langgraph_compiled")
@@ -89,17 +97,44 @@ class ARIAOrchestrator:
             "area": area,
             "disaster_type": disaster_type,
             "incident_id": incident_id,
+            "dispatch_from": payload.get("dispatch_from"),
         }
         self.agent1_report = None
         self.agent2_report = None
         self.latest_briefing = None
+        self._agent1_decision = None
+
+        if self.world_state:
+            from sim.world_state import Marker
+            self.world_state.add_marker(Marker(
+                id=incident_id,
+                lat=area["center"]["lat"],
+                lon=area["center"]["lon"],
+                type=disaster_type,
+                radius_m=area.get("radius_m", 600.0),
+                severity=payload.get("severity", "medium"),
+                confirmed=True,
+            ))
 
         if self.sensor_overlay:
             center = area["center"]
             radius_m = area.get("radius_m", 600.0)
+            actual_type = self._resolve_actual_disaster_type(center, disaster_type)
             self.sensor_overlay.set_incident(
-                center["lat"], center["lon"], radius_m, disaster_type
+                center["lat"], center["lon"], radius_m, actual_type
             )
+
+        # Reposition drone-001 to the nearest response centre before launch
+        dispatch_from = payload.get("dispatch_from")
+        if dispatch_from and self.world_state:
+            self.world_state.reposition_drone(
+                "drone-001", dispatch_from["lat"], dispatch_from["lon"], 0.0
+            )
+            await self._emit("agent_stream", {
+                "agent_id": "orchestrator",
+                "event": "dispatch",
+                "content": f"{dispatch_from['name']} — drone-001 assigned to {incident_id} · en route",
+            })
 
         self.state = "SURVEILLANCE_ACTIVE"
         agent1_payload = {
@@ -122,6 +157,10 @@ class ARIAOrchestrator:
         if self._agent1_future and not self._agent1_future.done():
             self._agent1_future.set_result(report)
         asyncio.create_task(self._subscribe_and_publish_a1(report))
+
+    def receive_agent1_decision(self, decision: dict) -> None:
+        self._agent1_decision = decision
+        logger.info("agent1_decision_received", decision=decision)
 
     def receive_agent2_report(self, report: dict) -> None:
         self.agent2_report = report
@@ -153,6 +192,12 @@ class ARIAOrchestrator:
         for hazard in report.get("hazard_map", []):
             self.world_state.add_hazard({**hazard, "incident_id": incident_id})
         asyncio.create_task(self._publish_agent2_findings(report))
+
+    def receive_agent4_report(self, report: dict) -> None:
+        self.agent4_report = report
+        logger.info("agent4_report_received", relief_type=report.get("relief_type"))
+        if self._agent4_future and not self._agent4_future.done():
+            self._agent4_future.set_result(report)
 
     def get_incident_context(self) -> dict | None:
         return self.active_incident
@@ -200,10 +245,22 @@ class ARIAOrchestrator:
             logger.warning("swarm_node_no_agent1_report")
             return {"agent2_findings": {}}
 
+        decision = self._agent1_decision or {}
+        if decision.get("name") == "maintain_surveillance":
+            reason = decision.get("reason", "")
+            logger.info("swarm_skipped_agent1_decision", reason=reason)
+            await self._emit("agent_stream", {
+                "agent_id": "orchestrator",
+                "event": "swarm_skipped",
+                "content": f"Agent 1 → maintain surveillance. {reason}",
+            })
+            return {"agent2_findings": {}}
+
+        classification = decision.get("swarm_type") or a1_report.get("classification", "fire")
+
         loop = asyncio.get_event_loop()
         self._agent2_future = loop.create_future()
 
-        classification = a1_report.get("classification", "fire")
         agent2 = SpecialistAgent(
             agent_id=f"agent-2-{state['incident_id']}",
             model=self.model_a2,
@@ -213,6 +270,8 @@ class ARIAOrchestrator:
             classification=classification,
             incident_id=state["incident_id"],
             stream_callback=self.event_callback,
+            staging_lat=(self.active_incident or {}).get("dispatch_from", {}).get("lat"),
+            staging_lon=(self.active_incident or {}).get("dispatch_from", {}).get("lon"),
         )
         await self._emit("agent_stream", {
             "agent_id": "agent-2", "event": "started",
@@ -230,6 +289,43 @@ class ARIAOrchestrator:
             self._agent2_future = None
 
         return {"agent2_findings": findings if isinstance(findings, dict) else dict(findings)}
+
+    async def _relief_node(self, state: ARIAState) -> dict:
+        from agents.agent4_relief import ReliefAgent
+
+        a2_report = state.get("agent2_findings") or {}
+        classification = (state.get("agent1_report") or {}).get("classification", "fire")
+
+        loop = asyncio.get_event_loop()
+        self._agent4_future = loop.create_future()
+
+        agent4 = ReliefAgent(
+            agent_id=f"agent-4-{state['incident_id']}",
+            model=self.model_a4,
+            world_state=self.world_state,
+            sensor_overlay=self.sensor_overlay,
+            orchestrator=self,
+            classification=classification,
+            incident_id=state["incident_id"],
+            stream_callback=self.event_callback,
+            staging_lat=(self.active_incident or {}).get("dispatch_from", {}).get("lat"),
+            staging_lon=(self.active_incident or {}).get("dispatch_from", {}).get("lon"),
+        )
+        await self._emit("agent_stream", {
+            "agent_id": "agent-4", "event": "started",
+            "content": f"Relief coordination — {classification}",
+        })
+        asyncio.create_task(agent4.run(a2_report))
+
+        try:
+            plan = await asyncio.wait_for(self._agent4_future, timeout=120.0)
+        except asyncio.TimeoutError:
+            logger.error("agent4_timeout")
+            return {"relief_plan": {}}
+        finally:
+            self._agent4_future = None
+
+        return {"relief_plan": plan if isinstance(plan, dict) else dict(plan)}
 
     async def _advisory_node(self, state: ARIAState) -> dict:
         from agents.agent3_advisory import AdvisoryAgent
@@ -312,6 +408,7 @@ class ARIAOrchestrator:
                     "go_payload": agent1_payload,
                     "agent1_report": None,
                     "agent2_findings": None,
+                    "relief_plan": None,
                     "advisory": None,
                     "error": None,
                 },
@@ -320,12 +417,15 @@ class ARIAOrchestrator:
         except Exception as e:
             logger.error("graph_error", error=str(e), exc_info=True)
             await self._emit("agent_stream", {"agent_id": "orchestrator", "event": "error", "content": str(e)})
+        finally:
+            await self._recall_all_drones(incident_id)
 
     async def _run_incident_stack_fallback(self, agent1_payload: dict) -> None:
         """Fallback sequential pipeline when LangGraph is not available."""
         from agents.agent1_surveillance import SurveillanceAgent
         from agents.agent2_specialist import SpecialistAgent
         from agents.agent3_advisory import AdvisoryAgent
+        from agents.agent4_relief import ReliefAgent
         from agents.messages import IncidentBriefing
 
         incident_id = (self.active_incident or {}).get("incident_id", "fallback")
@@ -345,9 +445,22 @@ class ARIAOrchestrator:
                 world_state=self.world_state, sensor_overlay=self.sensor_overlay,
                 orchestrator=self, classification=classification, incident_id=incident_id,
                 stream_callback=self.event_callback,
+                staging_lat=(self.active_incident or {}).get("dispatch_from", {}).get("lat"),
+                staging_lon=(self.active_incident or {}).get("dispatch_from", {}).get("lon"),
             )
             await self._emit("agent_stream", {"agent_id": "agent-2", "event": "started", "content": f"Deploying {classification} swarm"})
             await agent2.run(self.agent1_report or {})
+
+            agent4 = ReliefAgent(
+                agent_id="agent-4", model=self.model_a4,
+                world_state=self.world_state, sensor_overlay=self.sensor_overlay,
+                orchestrator=self, classification=classification, incident_id=incident_id,
+                stream_callback=self.event_callback,
+                staging_lat=(self.active_incident or {}).get("dispatch_from", {}).get("lat"),
+                staging_lon=(self.active_incident or {}).get("dispatch_from", {}).get("lon"),
+            )
+            await self._emit("agent_stream", {"agent_id": "agent-4", "event": "started", "content": f"Relief coordination — {classification}"})
+            await agent4.run(self.agent2_report or {})
             self.state = "ADVISORY_ACTIVE"
 
             briefing = IncidentBriefing.from_dicts(
@@ -363,6 +476,8 @@ class ARIAOrchestrator:
         except Exception as e:
             logger.error("incident_stack_error", error=str(e), exc_info=True)
             await self._emit("agent_stream", {"agent_id": "orchestrator", "event": "error", "content": str(e)})
+        finally:
+            await self._recall_all_drones(incident_id)
 
     async def _emit(self, event_type: str, data: dict) -> None:
         if self.event_callback:
@@ -370,3 +485,91 @@ class ARIAOrchestrator:
                 await self.event_callback(event_type, data)
             except Exception as e:
                 logger.warning("emit_error", event_type=event_type, error=str(e))
+
+    async def _recall_all_drones(self, incident_id: str) -> None:
+        """RTL drones that are low-battery or unneeded; redirect others to recon remaining incidents."""
+        import math
+
+        if not self.world_state:
+            return
+        self.state = "STANDBY"
+
+        def _dist(lat1, lon1, lat2, lon2):
+            R = 6_371_000.0
+            dlat = math.radians(lat2 - lat1)
+            dlon = math.radians(lon2 - lon1)
+            a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
+            return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+        LOW_BATTERY = 20.0
+        remaining = [m for m in self.world_state.markers if m.id != incident_id]
+        drone_ids = list(self.world_state.drones.keys())
+        recalled, redirected = [], []
+
+        for drone_id in drone_ids:
+            drone = self.world_state.drones.get(drone_id)
+            if not drone or drone.get_state() in ("IDLE", "RTL"):
+                continue
+
+            if drone.battery_pct <= LOW_BATTERY:
+                drone.return_to_launch()
+                recalled.append(drone_id)
+            elif remaining:
+                nearest = min(remaining, key=lambda m: _dist(drone.lat, drone.lon, m.lat, m.lon))
+                cruise_alt = drone._defaults.get("cruise_alt") or drone._defaults.get("hover_alt", 30.0)
+                self.world_state.command_drone(drone_id, nearest.lat, nearest.lon, cruise_alt)
+                redirected.append((drone_id, nearest.id))
+            else:
+                drone.return_to_launch()
+                recalled.append(drone_id)
+
+        parts = []
+        if recalled:
+            parts.append(f"{len(recalled)} RTL (low-battery or no tasks)")
+        if redirected:
+            parts.append(f"{len(redirected)} redirected to recon " + ", ".join(f"{d}→{m}" for d, m in redirected))
+        summary = "; ".join(parts) if parts else "no active drones"
+
+        logger.info("incident_resolved_drone_status", incident_id=incident_id, recalled=len(recalled), redirected=len(redirected))
+        await self._emit("agent_stream", {
+            "agent_id": "orchestrator",
+            "event": "incident_resolved",
+            "content": f"Incident {incident_id} resolved — {summary}",
+        })
+
+    def _resolve_actual_disaster_type(self, center: dict, operator_guess: str) -> str:
+        """Return the nearest scenario marker's type as ground truth.
+
+        The operator's disaster_type selection is their hypothesis — the scenario
+        marker is what actually happened. If the drone is dispatched within 5km of
+        a known marker, use the marker's type so sensor data reflects reality.
+        """
+        import math
+
+        if not self.world_state or not self.world_state.markers:
+            return operator_guess
+
+        def _hav(lat1, lon1, lat2, lon2):
+            R = 6_371_000.0
+            dlat = math.radians(lat2 - lat1)
+            dlon = math.radians(lon2 - lon1)
+            a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
+            return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+        nearest = min(
+            self.world_state.markers,
+            key=lambda m: _hav(center["lat"], center["lon"], m.lat, m.lon),
+        )
+        dist = _hav(center["lat"], center["lon"], nearest.lat, nearest.lon)
+
+        if dist <= 5000:
+            if nearest.type != operator_guess:
+                logger.info(
+                    "operator_misclassification",
+                    operator_guess=operator_guess,
+                    actual=nearest.type,
+                    dist_m=round(dist),
+                )
+            return nearest.type
+
+        return operator_guess

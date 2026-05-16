@@ -2,6 +2,7 @@
 
 Flies expanding circle survey pattern to locate and classify incidents.
 Does NOT receive disaster_type — classifies from sensor data alone.
+After classification, makes an explicit decision: request backup or maintain surveillance.
 """
 
 import asyncio
@@ -11,7 +12,14 @@ from anthropic import AsyncAnthropic
 
 from agents.tools.flight_tools import FLY_TO_TOOL, create_fly_to_handler
 from agents.tools.sensor_tools import GET_SENSOR_READING_TOOL, create_get_sensor_reading_handler
-from agents.tools.report_tools import REPORT_CLASSIFICATION_TOOL, create_report_classification_handler
+from agents.tools.report_tools import (
+    REPORT_CLASSIFICATION_TOOL,
+    REQUEST_BACKUP_TOOL,
+    MAINTAIN_SURVEILLANCE_TOOL,
+    create_report_classification_handler,
+    create_request_backup_handler,
+    create_maintain_surveillance_handler,
+)
 from prompts.registry import load_prompt
 
 logger = structlog.get_logger()
@@ -49,7 +57,7 @@ def _haversine(lat1, lon1, lat2, lon2):
 
 
 class SurveillanceAgent:
-    """Agent 1: expanding circle survey → LLM classification → loiter."""
+    """Agent 1: expanding circle survey → LLM classification → decision (backup or maintain)."""
 
     def __init__(
         self,
@@ -70,6 +78,7 @@ class SurveillanceAgent:
         self.stream_callback = stream_callback
         self.client = AsyncAnthropic()
         self._running = False
+        self._decision = None
 
         prompt_data = load_prompt("agent1_surveillance")
         self._system_prompt = prompt_data["text"]
@@ -80,6 +89,8 @@ class SurveillanceAgent:
             "fly_to": create_fly_to_handler(world_state),
             "get_sensor_reading": create_get_sensor_reading_handler(sensor_overlay, world_state),
             "report_classification": create_report_classification_handler(orchestrator),
+            "request_backup": create_request_backup_handler(orchestrator),
+            "maintain_surveillance": create_maintain_surveillance_handler(orchestrator),
         }
 
         self.target_coords = None
@@ -99,7 +110,7 @@ class SurveillanceAgent:
         self.classification_reported = False
         self.sensor_readings = []
         logger.info("agent1_go_received", coords=self.target_coords)
-        await self._emit("survey_started", self.target_coords)
+        await self._emit("survey_started", f"Dispatched to ({self.target_coords['lat']:.4f}, {self.target_coords['lon']:.4f})")
         try:
             await self._run_survey()
         except Exception as e:
@@ -115,9 +126,10 @@ class SurveillanceAgent:
             drone_id=self.drone_id, lat=center_lat, lon=center_lon, alt=cruise_alt
         )
         await self._wait_for_arrival(center_lat, center_lon)
-        await self._emit("transit_complete", {"lat": center_lat, "lon": center_lon})
+        await self._emit("transit_complete", f"Overhead target ({center_lat:.4f}, {center_lon:.4f}) — beginning survey")
 
         for radius in SURVEY_RADII:
+            await self._emit("orbit_started", f"Orbit ring at {radius:.0f}m — {ORBIT_POINTS} waypoints")
             orbit_readings = []
             for point_idx in range(ORBIT_POINTS):
                 if not self._running:
@@ -130,19 +142,34 @@ class SurveillanceAgent:
                 )
                 await self._wait_for_arrival(pt_lat, pt_lon)
 
+                # Emit waypoint progress every other point to reduce noise
+                if point_idx % 2 == 0:
+                    await self._emit("at_waypoint", f"WP {point_idx + 1}/{ORBIT_POINTS}  ({pt_lat:.4f}, {pt_lon:.4f}) — scanning")
+
                 reading = await self._tool_handlers["get_sensor_reading"](drone_id=self.drone_id)
                 orbit_readings.append(reading)
                 if reading.get("status") == "ok":
-                    await self._emit("sensor_hit", reading.get("data", {}))
+                    data = reading.get("data", {})
+                    flags = ", ".join(data.get("hazard_flags", [])) or "none"
+                    hit_summary = (
+                        f"SENSOR HIT — thermal={'YES' if data.get('thermal_detected') else 'NO'}"
+                        f"  survivor_prob={data.get('survivor_probability', 0):.0%}"
+                        f"  wind={data.get('wind_speed', '?')}m/s"
+                        f"  vis={data.get('visibility_m', '?')}m"
+                        f"  flags=[{flags}]"
+                    )
+                    await self._emit("sensor_hit", hit_summary)
 
             hits = [r for r in orbit_readings if r.get("status") == "ok"]
             if hits:
                 self.sensor_readings = hits
+                await self._emit("ring_complete", f"{len(hits)}/{ORBIT_POINTS} detections at {radius:.0f}m — classifying incident")
                 await self._classify(center_lat, center_lon, radius, hits)
                 return
+            await self._emit("ring_clear", f"No detections at {radius:.0f}m — expanding search")
 
         logger.warning("agent1_no_sensor_data", radii_tried=SURVEY_RADII)
-        await self._emit("no_data", {"radii_tried": SURVEY_RADII})
+        await self._emit("no_data", f"No sensor data across all rings ({', '.join(str(int(r))+'m' for r in SURVEY_RADII)}) — standing by")
 
     async def _classify(self, center_lat, center_lon, radius, sensor_hits) -> None:
         sensor_data = [h.get("data", h) for h in sensor_hits]
@@ -163,27 +190,92 @@ class SurveillanceAgent:
             max_tokens=1024,
             system=self._system_prompt,
             messages=messages,
-            tools=self.tools,
+            tools=[REPORT_CLASSIFICATION_TOOL],
             tool_choice={"type": "tool", "name": "report_classification"},
         )
 
+        classification_data = None
         for block in response.content:
-            if block.type == "tool_use" and block.name == "report_classification":
+            if block.type == "text" and block.text.strip():
+                await self._emit("reasoning", block.text.strip())
+            elif block.type == "tool_use" and block.name == "report_classification":
                 kwargs_with_hash = {
                     **block.input,
                     "prompt_version_hash": self._prompt_version_hash,
                 }
-                result = await self._tool_handlers["report_classification"](**kwargs_with_hash)
+                await self._tool_handlers["report_classification"](**kwargs_with_hash)
+                classification_data = block.input
                 self.classification_reported = True
-                logger.info("agent1_classified", result=result)
-                await self._emit("classified", block.input)
-
-                # Fly back to incident center to establish loiter (CP10)
-                await self._tool_handlers["fly_to"](
-                    drone_id=self.drone_id, lat=center_lat, lon=center_lon, alt=80.0
+                c = block.input
+                summary = (
+                    f"CLASSIFIED: {c.get('classification', '?').upper()}  "
+                    f"{c.get('confidence', 0):.0%} confidence  "
+                    f"r={c.get('area', {}).get('radius_m', '?')}m"
                 )
-                await self._emit("loitering", {"lat": center_lat, "lon": center_lon, "alt": 80.0})
-                break
+                await self._emit("classified", summary)
+                logger.info("agent1_classified", classification=c.get("classification"))
+
+        if classification_data:
+            await self._tool_handlers["fly_to"](
+                drone_id=self.drone_id, lat=center_lat, lon=center_lon, alt=80.0
+            )
+            await self._emit("loitering", f"Loitering at ({center_lat:.4f}, {center_lon:.4f}) alt 80m — assessing situation")
+            await self._decide(classification_data)
+
+    async def _decide(self, classification_data: dict) -> None:
+        """Second LLM call: decide whether to request specialist backup or maintain surveillance."""
+        c = classification_data
+        sensor_sum = c.get("sensor_summary", {})
+        messages = [
+            {
+                "role": "user",
+                "content": (
+                    f"Classification: {c.get('classification')} "
+                    f"(confidence {c.get('confidence', 0):.0%})\n"
+                    f"Notes: {c.get('notes', 'none')}\n"
+                    f"Sensor summary: thermal={sensor_sum.get('thermal_detected')}, "
+                    f"survivor_probability={sensor_sum.get('survivor_probability', 0):.0%}, "
+                    f"hazards={sensor_sum.get('hazard_flags', [])}, "
+                    f"wind={sensor_sum.get('wind_speed', '?')}m/s, "
+                    f"visibility={sensor_sum.get('visibility_m', '?')}m\n\n"
+                    "Based on your assessment, decide: request specialist backup or maintain surveillance?"
+                ),
+            }
+        ]
+
+        response = await self.client.messages.create(
+            model=self.model,
+            max_tokens=512,
+            system=self._system_prompt,
+            messages=messages,
+            tools=[REQUEST_BACKUP_TOOL, MAINTAIN_SURVEILLANCE_TOOL],
+            tool_choice={"type": "any"},
+        )
+
+        for block in response.content:
+            if block.type == "text" and block.text.strip():
+                await self._emit("reasoning", block.text.strip())
+            elif block.type == "tool_use":
+                inp = block.input
+                if block.name == "request_backup":
+                    summary = (
+                        f"REQUEST BACKUP — {inp.get('swarm_type', '?').replace('_', ' ').upper()} swarm"
+                        f" — {inp.get('urgency', '?')} urgency"
+                        f" — est. {inp.get('estimated_casualties', 0)} casualties"
+                    )
+                    await self._emit("decision", summary)
+                    await self._emit("rationale", inp.get("rationale", ""))
+                    result = await self._tool_handlers["request_backup"](**inp)
+                    logger.info("agent1_requested_backup", swarm_type=inp.get("swarm_type"), urgency=inp.get("urgency"))
+                elif block.name == "maintain_surveillance":
+                    summary = (
+                        f"MAINTAIN SURVEILLANCE"
+                        f" — reassess in {inp.get('reassess_in_seconds', '?')}s"
+                        f" — {inp.get('reason', '')}"
+                    )
+                    await self._emit("decision", summary)
+                    result = await self._tool_handlers["maintain_surveillance"](**inp)
+                    logger.info("agent1_maintain_surveillance", reason=inp.get("reason"))
 
     async def _wait_for_arrival(self, target_lat, target_lon, threshold_m=20.0) -> None:
         while self._running:
