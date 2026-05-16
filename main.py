@@ -101,7 +101,7 @@ async def broadcast_loop():
             telemetry = world_state.get_all_telemetry()
             zones = world_state.get_zones()
             survivors = world_state.get_survivor_markers()
-
+            markers = [m.model_dump() for m in world_state.get_markers()]
             bases = world_state.get_bases()
             for ws in list(connected_clients):
                 try:

@@ -1,5 +1,5 @@
 import mapboxgl from 'mapbox-gl'
-import { DISASTER_COLOR_MAP, SEVERITY_RADII } from './constants.js'
+import { DISASTER_COLOR_MAP, SEVERITY_RADII, DISASTER_ICON_PATHS } from './constants.js'
 
 // Geographic circle as GeoJSON polygon
 function circleGeoJSON(lat, lon, radiusM, steps = 64) {
@@ -91,14 +91,12 @@ class _MapStateManager {
     const ring2 = document.createElement('span')
     ring2.style.cssText = `position:absolute;inset:0;border-radius:50%;border:1px solid ${color};animation:beaconRing 2s ease-out infinite;animation-delay:0.7s`
     el.appendChild(ring2)
+    const cs = SIZE * 0.75
     const core = document.createElement('span')
-    const cs = SIZE * 0.42
-    core.style.cssText = `position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:${cs}px;height:${cs}px;border-radius:50%;background:${color};box-shadow:0 0 12px ${color},0 0 24px ${color}88`
+    core.style.cssText = `position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:${cs}px;height:${cs}px;border-radius:50%;background:${color}cc;box-shadow:0 0 12px ${color},0 0 24px ${color}88;display:flex;align-items:center;justify-content:center`
+    const iconSize = Math.round(cs * 0.72)
+    core.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${iconSize}" height="${iconSize}" style="display:block">${iconPath}</svg>`
     el.appendChild(core)
-    const hl = document.createElement('span')
-    const hs = SIZE * 0.18
-    hl.style.cssText = `position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:${hs}px;height:${hs}px;border-radius:50%;background:rgba(255,255,255,0.9);box-shadow:0 0 4px rgba(255,255,255,0.9)`
-    el.appendChild(hl)
 
     const timestamp = Date.now()
     this._incidentMeta[incident_id] = { type, severity, lat, lon, status: status || 'ACTIVE', timestamp }

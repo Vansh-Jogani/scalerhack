@@ -58,6 +58,7 @@ class IncidentBriefing(BaseModel):
     timestamp: str = ""
     surveillance_report: Optional[Any] = None
     swarm_findings: Optional[Any] = None
+    relief_plan: Optional[dict] = None
     previous_advisory: Optional[dict] = None
 
     @classmethod
@@ -66,6 +67,7 @@ class IncidentBriefing(BaseModel):
         incident_id: str,
         a1_data: dict,
         a2_data: dict,
+        a4_data: Optional[dict] = None,
         previous_advisory: Optional[dict] = None,
     ) -> "IncidentBriefing":
         sr: Any = None
@@ -86,6 +88,7 @@ class IncidentBriefing(BaseModel):
             incident_id=incident_id,
             surveillance_report=sr,
             swarm_findings=sf,
+            relief_plan=a4_data or None,
             previous_advisory=previous_advisory,
             timestamp=datetime.now(timezone.utc).isoformat(),
         )
@@ -104,6 +107,7 @@ class IncidentBriefing(BaseModel):
                 if hasattr(self.swarm_findings, "model_dump")
                 else self.swarm_findings
             ),
+            "relief_plan": self.relief_plan,
             "previous_advisory": self.previous_advisory,
         }
 

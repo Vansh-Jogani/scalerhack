@@ -205,13 +205,25 @@ function StreamCard({ feedEntries, accent, advisory }) {
           )}
           {feedEntries.map((e) => {
             const fc = agentColors[e.agent] || '#7A8FA8'
+            const ev = e.event || ''
+            const evBorder = ev === 'decision' ? '#FFB800'
+              : ev === 'reasoning' || ev === 'rationale' ? '#3A5A7A'
+              : ev === 'classified' ? '#00FF88'
+              : ev === 'sensor_hit' ? '#00CC66'
+              : ev === 'orbit_started' || ev === 'ring_complete' || ev === 'ring_clear' ? '#3A5A7A'
+              : 'transparent'
+            const contentColor = ev === 'decision' ? '#FFD966'
+              : ev === 'reasoning' || ev === 'rationale' ? 'rgba(232,237,245,0.5)'
+              : 'rgba(232,237,245,0.8)'
+            const contentWeight = ev === 'decision' ? 600 : 400
+            const contentSize = ev === 'reasoning' || ev === 'rationale' ? 11 : 12
             return (
-              <div key={e.id} style={{ display: 'flex', gap: 8, padding: '6px 18px', borderBottom: '1px solid rgba(255,255,255,0.03)', alignItems: 'flex-start', animation: 'ticker 0.2s ease-out' }}>
+              <div key={e.id} style={{ display: 'flex', gap: 8, padding: '6px 18px 6px 15px', borderBottom: '1px solid rgba(255,255,255,0.03)', borderLeft: `3px solid ${evBorder}`, alignItems: 'flex-start', animation: 'ticker 0.2s ease-out' }}>
                 <Mn color="rgba(232,237,245,0.28)" size={10} weight={500}>{e.ts}</Mn>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, color: fc, letterSpacing: '0.06em', minWidth: 22, flexShrink: 0 }}>{e.agent}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   {e.event && <div style={{ fontSize: 9, color: 'rgba(232,237,245,0.38)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', fontWeight: 600, marginBottom: 1 }}>{e.event}</div>}
-                  <div style={{ fontSize: 12, color: 'rgba(232,237,245,0.8)', lineHeight: 1.45, fontFamily: 'var(--font-mono)', wordBreak: 'break-word' }}>{e.content}</div>
+                  <div style={{ fontSize: contentSize, color: contentColor, fontWeight: contentWeight, lineHeight: 1.45, fontFamily: 'var(--font-mono)', wordBreak: 'break-word', fontStyle: (ev === 'reasoning' || ev === 'rationale') ? 'italic' : 'normal' }}>{e.content}</div>
                 </div>
               </div>
             )

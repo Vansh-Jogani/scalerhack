@@ -343,6 +343,7 @@ class ARIAOrchestrator:
             incident_id=state["incident_id"],
             a1_data=state.get("agent1_report") or {},
             a2_data=state.get("agent2_findings") or {},
+            a4_data=state.get("relief_plan") or None,
             previous_advisory=None,
         )
         self.latest_briefing = briefing
@@ -384,6 +385,7 @@ class ARIAOrchestrator:
             incident_id=incident_id,
             a1_data=self.agent1_report or {},
             a2_data=report,
+            a4_data=self.agent4_report or None,
         )
         await self.event_bus.publish("agent_2_findings_updated", report)
 
@@ -400,6 +402,7 @@ class ARIAOrchestrator:
                 incident_id=incident_id,
                 a1_data=self.agent1_report,
                 a2_data=self.agent2_report or {},
+                a4_data=self.agent4_report or None,
             )
         agent3 = AdvisoryAgent(model=self.model_a3, orchestrator=self)
         advisory = await agent3.on_trigger(briefing)
@@ -479,6 +482,7 @@ class ARIAOrchestrator:
                 incident_id=incident_id,
                 a1_data=self.agent1_report or {},
                 a2_data=self.agent2_report or {},
+                a4_data=self.agent4_report or None,
             )
             agent3 = AdvisoryAgent(model=self.model_a3, orchestrator=self)
             await self._emit("agent_stream", {"agent_id": "agent-3", "event": "started", "content": "Generating advisory"})
