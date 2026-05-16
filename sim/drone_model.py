@@ -5,25 +5,29 @@ State machine: IDLE -> FLYING -> LOITERING -> RTL -> IDLE
 """
 
 import math
+import structlog
 from typing import Optional, Tuple
 
 from sim.drone_interface import DroneInterface, Telemetry
 
+logger = structlog.get_logger()
+
+
 FIXED_WING_DEFAULTS = {
-    "cruise_speed": 18.0,   # m/s
+    "cruise_speed": 180.0,   # m/s (10x for demo)
     "cruise_alt": 120.0,    # m AGL
     "loiter_radius": 80.0,  # m
     "turn_radius": 45.0,    # m
 }
 
 ROTARY_DEFAULTS = {
-    "cruise_speed": 8.0,
+    "cruise_speed": 80.0,   # m/s (10x for demo)
     "hover_alt": 30.0,
     "loiter_time": 30.0,
 }
 
 MICRO_ROTARY_DEFAULTS = {
-    "cruise_speed": 4.0,
+    "cruise_speed": 40.0,   # m/s (10x for demo)
     "hover_alt": 10.0,
     "loiter_time": 60.0,
 }
@@ -165,6 +169,7 @@ class DroneModel(DroneInterface):
                     self.alt = self.target_alt if self.target_alt is not None else self.alt
                     self._state = "LOITERING"
                     self.speed = 0.0
+                    logger.info("drone_arrived", drone_id=self.drone_id, lat=round(self.lat, 5), lon=round(self.lon, 5), alt=round(self.alt, 1))
 
         elif self._state == "LOITERING":
             # Hold position; external command can transition out
@@ -184,8 +189,7 @@ class DroneModel(DroneInterface):
                 self.alt = self.home_alt
                 self._state = "IDLE"
                 self.speed = 0.0
-
-        # Simple battery drain: 0.01% per second while not idle
+                logger.info("drone_rtl_complete", drone_id=self.drone_id)
         if self._state != "IDLE":
             self.battery_pct = max(0.0, self.battery_pct - 0.01 * dt)
 
@@ -225,6 +229,8 @@ class DroneModel(DroneInterface):
 
     def set_target(self, lat: float, lon: float, alt: float) -> None:
         """Set a new target; transitions from IDLE or LOITERING to FLYING."""
+        dist = _haversine_distance(self.lat, self.lon, lat, lon) if self.target_lat else 0
+        logger.info("drone_target_set", drone_id=self.drone_id, lat=round(lat, 5), lon=round(lon, 5), alt=alt, dist_m=round(dist, 1))
         self.target_lat = lat
         self.target_lon = lon
         self.target_alt = alt
@@ -233,6 +239,7 @@ class DroneModel(DroneInterface):
 
     def return_to_launch(self) -> None:
         """Command the drone to return to its home position."""
+        logger.info("drone_rtl", drone_id=self.drone_id, from_lat=round(self.lat, 5), from_lon=round(self.lon, 5))
         self._state = "RTL"
 
     def get_telemetry(self) -> Telemetry:
@@ -246,6 +253,7 @@ class DroneModel(DroneInterface):
             speed=self.speed,
             state=self._state,
             battery_pct=self.battery_pct,
+            drone_type=self.drone_type,
         )
 
     def get_state(self) -> str:

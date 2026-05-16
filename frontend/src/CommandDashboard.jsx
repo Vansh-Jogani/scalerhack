@@ -1,6 +1,26 @@
 import { useState, useEffect, useRef } from 'react'
 import { DISASTER_COLORS, DISASTER_LABELS, DISASTER_TYPES, SEVERITY_LEVELS, DISASTER_COLOR_MAP } from './constants.js'
 import { setDrawColor, clearDrawPolygon } from './Map.jsx'
+import responseCentres from './data/response_centres.json'
+import { findNearestCentre } from './DispatchAnimation.js'
+
+function formatContent(raw) {
+  try {
+    const obj = typeof raw === 'string' ? JSON.parse(raw) : raw
+    if (typeof obj !== 'object' || obj === null) return raw
+    return Object.entries(obj).map(([k, v]) => {
+      const val = typeof v === 'object' ? JSON.stringify(v) : String(v)
+      return (
+        <div key={k} style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <span style={{ color: '#7A9AB8', flexShrink: 0 }}>{k}</span>
+          <span style={{ color: '#FFFFFF', wordBreak: 'break-all' }}>{val}</span>
+        </div>
+      )
+    })
+  } catch {
+    return <span style={{ color: '#FFFFFF' }}>{raw}</span>
+  }
+}
 
 const SEV_COLORS = { LOW: '#FFE566', MEDIUM: '#FFAA00', HIGH: '#FF5500', CRITICAL: '#CC1A1A' }
 
@@ -14,131 +34,18 @@ const AGENT_LABELS = {
   AGENT_1:      'A-1',
   AGENT_2:      'A-2',
   AGENT_3:      'A-3',
+  AGENT_4:      'A-4',
 }
 
 const AGENT_COLORS = {
   AGENT_1: '#7B68EE',
   AGENT_2: null,
   AGENT_3: '#00FF88',
-  ORCHESTRATOR: '#4A5568',
+  AGENT_4: '#FF6B35',
+  ORCHESTRATOR: '#6A8AAA',
 }
 
-// ─── Orchestrator state derivation ──────────────────────────────────────────
-
-const ORCH_STATE_COLORS = {
-  STANDBY:            '#4A6A8A',
-  SURVEILLANCE_ACTIVE:'#7B68EE',
-  SWARM_ACTIVE:       '#FFB800',
-  ADVISORY_ACTIVE:    '#00FF88',
-  MULTI_INCIDENT:     '#FF8C42',
-  EMERGENCY:          '#FF3B3B',
-}
-
-/**
- * Derive orchestrator state from entries (newest-first).
- * Pure function — no side effects.
- * @param {Array} entries
- * @returns {string} OrchestratorState
- */
-function deriveOrchestratorState(entries) {
-  if (!entries.length) return 'STANDBY'
-  for (const e of entries) {
-    const c = (e.content || '').toUpperCase()
-    const agent = e.agent || ''
-    if (c.includes('EMERGENCY')) return 'EMERGENCY'
-    if (agent === 'ORCHESTRATOR' && c.includes('SWARM_ACTIVE')) return 'SWARM_ACTIVE'
-    if (agent === 'ORCHESTRATOR' && c.includes('SURVEILLANCE_ACTIVE')) return 'SURVEILLANCE_ACTIVE'
-    if (agent === 'AGENT_3' && e.event === 'advisory_issued') return 'ADVISORY_ACTIVE'
-    if (agent === 'AGENT_3' && c.includes('ADVISORY')) return 'ADVISORY_ACTIVE'
-  }
-  return 'STANDBY'
-}
-
-/**
- * Derive active agent from entries (newest-first).
- * Pure function — O(1).
- * @param {Array} entries
- * @returns {string|null}
- */
-function deriveActiveAgent(entries) {
-  return entries.length ? entries[0].agent : null
-}
-
-// ─── OrchestratorHUD sub-component ──────────────────────────────────────────
-
-function OrchestratorHUD({ orchestratorState, activeAgent }) {
-  const stateColor = ORCH_STATE_COLORS[orchestratorState] || ORCH_STATE_COLORS.STANDBY
-
-  const agents = [
-    { id: 'AGENT_1', label: 'A1', color: AGENT_COLORS.AGENT_1 || '#7B68EE' },
-    { id: 'AGENT_2', label: 'A2', color: '#FFB800' },
-    { id: 'AGENT_3', label: 'A3', color: AGENT_COLORS.AGENT_3 || '#00FF88' },
-  ]
-
-  return (
-    <div style={{
-      padding: '8px 14px',
-      borderBottom: '1px solid var(--border)',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 7,
-      flexShrink: 0,
-    }}>
-      {/* State badge */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{
-          fontSize: 9,
-          fontFamily: 'var(--font-display)',
-          letterSpacing: '0.1em',
-          color: '#4A6A8A',
-        }}>ORCHESTRATOR</span>
-        <span style={{
-          fontSize: 9,
-          fontFamily: 'var(--font-display)',
-          letterSpacing: '0.1em',
-          fontWeight: 700,
-          color: stateColor,
-          padding: '2px 6px',
-          border: `1px solid ${stateColor}`,
-          borderRadius: 2,
-          boxShadow: `0 0 6px ${stateColor}44`,
-          transition: 'color 0.15s, border-color 0.15s, box-shadow 0.15s',
-        }}>
-          {orchestratorState}
-        </span>
-      </div>
-
-      {/* Agent pipeline flow: A1 ──▶ A2 ──▶ A3 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        {agents.map((a, i) => {
-          const isActive = activeAgent === a.id
-          return (
-            <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{
-                padding: '3px 8px',
-                border: `1px solid ${isActive ? a.color : `${a.color}44`}`,
-                borderRadius: 2,
-                fontFamily: 'var(--font-display)',
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: '0.1em',
-                color: isActive ? a.color : `${a.color}66`,
-                opacity: isActive ? 1 : 0.35,
-                boxShadow: isActive ? `0 0 8px ${a.color}55` : 'none',
-                transition: 'all 0.15s',
-              }}>
-                {a.label}
-              </div>
-              {i < agents.length - 1 && (
-                <span style={{ color: '#2A3545', fontSize: 10, userSelect: 'none' }}>──▶</span>
-              )}
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
+const MAX_ENTRIES = 150
 
 // ─── sub-component: section label ───────────────────────────────────────────
 
@@ -155,7 +62,7 @@ function SectionLabel({ children, right }) {
         fontFamily: 'var(--font-display)',
         letterSpacing: '0.14em',
         textTransform: 'uppercase',
-        color: '#7A8FA8',
+        color: '#A8BECE',
       }}>{children}</span>
       {right && <span style={{ fontSize: 9, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>{right}</span>}
     </div>
@@ -170,13 +77,13 @@ function Advisory({ advisory }) {
       padding: '10px 0',
       fontFamily: 'var(--font-mono)',
       fontSize: 10,
-      color: '#4A6A8A',
+      color: '#7A9AB8',
       letterSpacing: '0.06em',
       display: 'flex',
       alignItems: 'center',
       gap: 6,
     }}>
-      <span style={{ color: '#4A6A8A' }}>▮</span>
+      <span style={{ color: '#7A9AB8' }}>▮</span>
       AWAITING AGENT 3 REPORT
     </div>
   )
@@ -189,7 +96,7 @@ function Advisory({ advisory }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {advisory.timestamp && (
-        <div style={{ fontSize: 9, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+        <div style={{ fontSize: 9, color: '#7A9AB8', fontFamily: 'var(--font-mono)' }}>
           {new Date(advisory.timestamp).toLocaleTimeString()}
         </div>
       )}
@@ -244,11 +151,64 @@ function Advisory({ advisory }) {
         <p style={{
           margin: 0,
           fontFamily: 'var(--font-mono)',
-          fontSize: 11,
-          color: 'var(--text-primary)',
-          lineHeight: 1.7,
+          fontSize: 12,
+          color: '#FFFFFF',
+          lineHeight: 1.8,
           whiteSpace: 'pre-wrap',
-        }}>{advisory.text || ''}</p>
+        }}>{text}</p>
+      )}
+
+      {structured && (
+        <>
+          {structured.situation_summary && (
+            <AdvisoryBlock label="Situation" color="#A8BECE">
+              {structured.situation_summary}
+            </AdvisoryBlock>
+          )}
+          {structured.immediate_actions?.length > 0 && (
+            <AdvisoryBlock label="Immediate Actions">
+              {structured.immediate_actions.map((a, i) => (
+                <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 3 }}>
+                  <span style={{ color: '#00FF88', flexShrink: 0 }}>{String(i + 1).padStart(2, '0')}</span>
+                  <span>{a}</span>
+                </div>
+              ))}
+            </AdvisoryBlock>
+          )}
+          {structured.risk_flags?.length > 0 && (
+            <AdvisoryBlock label="Risk Flags" color="#FFB800">
+              {structured.risk_flags.map((f, i) => (
+                <div key={i} style={{ display: 'flex', gap: 5 }}>
+                  <span style={{ color: '#FFB800' }}>⚠</span>
+                  <span>{f}</span>
+                </div>
+              ))}
+            </AdvisoryBlock>
+          )}
+          {structured.exclusion_zones?.length > 0 && (
+            <AdvisoryBlock label="Exclusion Zones" color="#FF3B3B">
+              {structured.exclusion_zones.map((z, i) => (
+                <div key={i} style={{ color: '#FF3B3B' }}>
+                  {z.radius_m}m @ {z.lat?.toFixed(4)}, {z.lon?.toFixed(4)}
+                  {z.reason && <span style={{ color: '#A8BECE' }}> — {z.reason}</span>}
+                </div>
+              ))}
+            </AdvisoryBlock>
+          )}
+          {structured.resource_requirements?.length > 0 && (
+            <AdvisoryBlock label="Resources">
+              {structured.resource_requirements.map((r, i) => (
+                <div key={i} style={{ display: 'flex', gap: 5 }}>
+                  <span style={{ color: '#8AA0B4' }}>·</span>
+                  <span>{r}</span>
+                </div>
+              ))}
+            </AdvisoryBlock>
+          )}
+          {structured.monitoring_status && (
+            <AdvisoryBlock label="Monitoring">{structured.monitoring_status}</AdvisoryBlock>
+          )}
+        </>
       )}
     </div>
   )
@@ -262,14 +222,14 @@ function AdvisoryBlock({ label, color, children }) {
         fontFamily: 'var(--font-display)',
         letterSpacing: '0.12em',
         textTransform: 'uppercase',
-        color: color || 'var(--text-secondary)',
+        color: color || '#A8BECE',
         marginBottom: 4,
       }}>{label}</div>
       <div style={{
         fontFamily: 'var(--font-mono)',
-        fontSize: 11,
-        color: 'var(--text-primary)',
-        lineHeight: 1.65,
+        fontSize: 12,
+        color: '#FFFFFF',
+        lineHeight: 1.7,
       }}>{children}</div>
     </div>
   )
@@ -283,9 +243,10 @@ export default function CommandDashboard({
   capturedCoords,
   activeIncidentType,
   advisory,
+  onAdvisoryUpdate,
+  connected,
   agentEntries,
-  wsConnected,
-  onSend,
+  onSendCommand,
 }) {
   // ── Command state ──
   const [coords, setCoords] = useState(null)
@@ -293,11 +254,9 @@ export default function CommandDashboard({
   const [selectedSeverity, setSelectedSeverity] = useState(null)
   const [deployStatus, setDeployStatus] = useState('idle')
 
-  const entries = agentEntries || []
-  const feedRef = useRef(null)
-
   // ── Tab state ──
   const [tab, setTab] = useState('pipeline') // 'pipeline' | 'advisory'
+  const feedRef = useRef(null)
 
   // ── Sync captured coords ──
   useEffect(() => { if (capturedCoords) setCoords(capturedCoords) }, [capturedCoords])
@@ -305,8 +264,6 @@ export default function CommandDashboard({
   // ── Sync circle colour ──
   useEffect(() => { if (selectedType) setDrawColor(DISASTER_COLORS[selectedType]) }, [selectedType])
 
-  // ── Auto-switch to advisory tab when a new advisory arrives ──
-  useEffect(() => { if (advisory) setTab('advisory') }, [advisory])
 
   // ── Deploy ──
   const hasZone = coords?.radius_m > 0
@@ -317,27 +274,28 @@ export default function CommandDashboard({
 
   function deploy() {
     if (!canDeploy) return
-    if (!wsConnected) {
-      setDeployStatus('failed')
-      setTimeout(() => setDeployStatus('idle'), 3000)
-      return
-    }
-    setDeployStatus('dispatching')
-    onSend({
+    const nearest = findNearestCentre([[coords.lon, coords.lat]], responseCentres)
+    const sent = onSendCommand({
       type: 'command',
       action: 'go',
-      data: {
-        area: {
-          center: { lat: coords.lat, lon: coords.lon },
-          radius_m: coords.radius_m ?? 200,
-          boundary_polygon: coords.vertices ?? null,
+        data: {
+          area: {
+            center: { lat: coords.lat, lon: coords.lon },
+            radius_m: coords.radius_m ?? 200,
+            boundary_polygon: coords.vertices ?? null,
+          },
+          disaster_type: selectedType.toLowerCase(),
+          severity: selectedSeverity.toLowerCase(),
+          dispatch_from: nearest ? { name: nearest.name, lat: nearest.lat, lon: nearest.lon } : null,
         },
-        disaster_type: selectedType.toLowerCase(),
-        severity: selectedSeverity.toLowerCase(),
-      },
-    })
-    setDeployStatus('active')
-    setTimeout(() => setDeployStatus('idle'), 4000)
+      })
+    if (sent) {
+      setDeployStatus('active')
+      setTimeout(() => setDeployStatus('idle'), 4000)
+    } else {
+      setDeployStatus('failed')
+      setTimeout(() => setDeployStatus('idle'), 3000)
+    }
   }
 
   // ─── render ────────────────────────────────────────────────────────────────
@@ -371,7 +329,7 @@ export default function CommandDashboard({
           fontSize: 9,
           fontFamily: 'var(--font-mono)',
           letterSpacing: '0.06em',
-          color: wsConnected ? 'var(--success)' : '#2A3545',
+          color: connected ? 'var(--success)' : 'var(--critical)',
         }}>
           {wsConnected ? '● LIVE' : '○ OFFLINE'}
         </span>
@@ -397,7 +355,7 @@ export default function CommandDashboard({
               background: isSelectingLocation ? `${accent}12` : 'transparent',
               border: `1px solid ${isSelectingLocation ? accent : 'var(--border)'}`,
               borderRadius: 3,
-              color: isSelectingLocation ? accent : 'var(--text-secondary)',
+              color: isSelectingLocation ? accent : '#C0CDD9',
               fontFamily: 'var(--font-display)',
               fontSize: 11,
               fontWeight: 600,
@@ -427,27 +385,27 @@ export default function CommandDashboard({
             <div style={{
               marginTop: 6,
               padding: '6px 10px',
-              background: '#0A0E14',
-              border: `1px solid ${hasZone ? accent : 'var(--border)'}`,
+              background: '#111822',
+              border: `1px solid ${hasZone ? accent : '#3A5070'}`,
               borderRadius: 3,
               fontFamily: 'var(--font-mono)',
               fontSize: 10,
-              color: 'var(--text-primary)',
+              color: '#FFFFFF',
               letterSpacing: '0.04em',
               lineHeight: 1.9,
             }}>
-              <span style={{ color: 'var(--text-secondary)' }}>LAT  </span>{coords.lat.toFixed(5)}
+              <span style={{ color: '#7A9AB8' }}>LAT  </span>{coords.lat.toFixed(5)}
               {'  '}
-              <span style={{ color: 'var(--text-secondary)' }}>LON  </span>{coords.lon.toFixed(5)}
+              <span style={{ color: '#7A9AB8' }}>LON  </span>{coords.lon.toFixed(5)}
               {hasZone && (<><br />
-                <span style={{ color: 'var(--text-secondary)' }}>RAD  </span>
+                <span style={{ color: '#7A9AB8' }}>RAD  </span>
                 {coords.radius_m >= 1000 ? (coords.radius_m / 1000).toFixed(2) + ' km' : coords.radius_m + ' m'}
               </>)}
             </div>
           )}
 
           {isSelectingLocation && !coords && (
-            <div style={{ marginTop: 5, fontSize: 10, color: '#2A3545', fontFamily: 'var(--font-mono)' }}>
+            <div style={{ marginTop: 5, fontSize: 10, color: '#8AA0B4', fontFamily: 'var(--font-mono)' }}>
               Click map to set centre
             </div>
           )}
@@ -463,10 +421,10 @@ export default function CommandDashboard({
                 onClick={() => setSelectedType(key)}
                 style={{
                   padding: '4px 9px',
-                  background: selectedType === key ? `${color}22` : `${color}08`,
-                  border: `1px solid ${selectedType === key ? color : `${color}44`}`,
+                  background: selectedType === key ? `${color}22` : `${color}10`,
+                  border: `1px solid ${selectedType === key ? color : `${color}66`}`,
                   borderRadius: 2,
-                  color: selectedType === key ? color : `${color}88`,
+                  color: selectedType === key ? color : `${color}BB`,
                   fontFamily: 'var(--font-display)',
                   fontSize: 10,
                   fontWeight: 600,
@@ -491,10 +449,10 @@ export default function CommandDashboard({
                 <button key={sev} onClick={() => setSelectedSeverity(sev)} style={{
                   flex: 1,
                   padding: '5px 0',
-                  background: active ? `${c}22` : `${c}08`,
-                  border: `1px solid ${active ? c : `${c}44`}`,
+                  background: active ? `${c}22` : `${c}10`,
+                  border: `1px solid ${active ? c : `${c}66`}`,
                   borderRadius: 2,
-                  color: active ? c : `${c}88`,
+                  color: active ? c : `${c}BB`,
                   fontFamily: 'var(--font-display)',
                   fontSize: 9,
                   fontWeight: 600,
@@ -518,7 +476,7 @@ export default function CommandDashboard({
             background: canDeploy ? accent : '#0A0E14',
             border: `1px solid ${canDeploy ? accent : '#1A2535'}`,
             borderRadius: 3,
-            color: canDeploy ? '#FFFFFF' : '#4A6A8A',
+            color: canDeploy ? '#0A0E14' : '#7A9AB8',
             fontFamily: 'var(--font-display)',
             fontSize: 11,
             fontWeight: 700,
@@ -569,96 +527,120 @@ export default function CommandDashboard({
 
       {/* ── Pipeline tab ── */}
       {tab === 'pipeline' && (
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-          <OrchestratorHUD
-            orchestratorState={deriveOrchestratorState(entries)}
-            activeAgent={deriveActiveAgent(entries)}
-          />
-          <div
-            ref={feedRef}
-            style={{
-              flex: 1,
-              overflowY: 'auto',
+        <div
+          ref={feedRef}
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column-reverse',
+            padding: '4px 0',
+          }}
+        >
+          {!connected && agentEntries.length === 0 && (
+            <div style={{
+              padding: '14px',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              color: '#7A9AB8',
+              letterSpacing: '0.05em',
+            }}>○  AWAITING BACKEND</div>
+          )}
+          {connected && agentEntries.length === 0 && (
+            <div style={{
+              padding: '14px',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              color: '#7A9AB8',
               display: 'flex',
-              flexDirection: 'column-reverse',
-              padding: '4px 0',
-            }}
-          >
-            {!wsConnected && entries.length === 0 && (
-              <div style={{
-                padding: '14px',
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10,
-                color: '#4A6A8A',
-                letterSpacing: '0.05em',
-              }}>○  AWAITING BACKEND</div>
-            )}
-            {wsConnected && entries.length === 0 && (
-              <div style={{
-                padding: '14px',
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10,
-                color: '#4A6A8A',
-                display: 'flex',
-                gap: 6,
-              }}>
-                AWAITING INCIDENT TRIGGER
-                <span style={{ animation: 'blink-cursor 1s step-end infinite' }}>▮</span>
-              </div>
-            )}
+              gap: 6,
+            }}>
+              AWAITING INCIDENT TRIGGER
+              <span style={{ animation: 'blink-cursor 1s step-end infinite' }}>▮</span>
+            </div>
+          )}
 
-            {entries.map((e) => {
-              const agentColor = e.agent === 'AGENT_2' && activeIncidentType
-                ? DISASTER_COLOR_MAP[activeIncidentType] || '#FFB800'
-                : AGENT_COLORS[e.agent] || null
-              const displayContent = e.content.length > 120
-                ? e.content.slice(0, 120) + '…'
-                : e.content
-              return (
-                <div key={e.id} style={{
-                  display: 'flex',
-                  alignItems: 'baseline',
-                  gap: 8,
-                  padding: '5px 14px',
-                  borderLeft: `2px solid ${agentColor || 'transparent'}`,
-                  borderBottom: '1px solid rgba(255,255,255,0.025)',
-                }}>
-                  <span style={{
-                    fontSize: 9,
-                    fontFamily: 'var(--font-mono)',
-                    color: '#4A6A8A',
-                    flexShrink: 0,
-                    letterSpacing: '0.02em',
-                  }}>{e.ts}</span>
+          {agentEntries.map((e) => {
+            const agentColor = e.agent === 'AGENT_2' && activeIncidentType
+              ? DISASTER_COLOR_MAP[activeIncidentType] || '#FFB800'
+              : AGENT_COLORS[e.agent] || null
+
+            const isDecision = e.event === 'decision'
+            const isDispatch = e.event === 'dispatch'
+            const isReasoning = e.event === 'reasoning' || e.event === 'rationale'
+            const isClassified = e.event === 'classified'
+            const isSensorHit = e.event === 'sensor_hit'
+            const isOrbit = e.event === 'orbit_started' || e.event === 'ring_complete' || e.event === 'ring_clear'
+            const isRelief = e.agent === 'AGENT_4' && (e.event === 'relief_started' || e.event === 'drone_tasked' || e.event === 'alert_broadcast')
+
+            const borderColor = isDispatch ? '#00FF88'
+              : isDecision ? '#FFB800'
+              : isRelief ? '#FF6B35'
+              : isClassified ? '#00FF88'
+              : isSensorHit ? '#00CC66'
+              : isOrbit ? '#3A5A7A'
+              : agentColor || 'transparent'
+
+            return (
+              <div key={e.id} style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: 8,
+                padding: (isDecision || isDispatch || isRelief) ? '7px 14px' : '5px 14px',
+                borderLeft: `2px solid ${borderColor}`,
+                borderBottom: '1px solid rgba(255,255,255,0.025)',
+                background: isDispatch ? 'rgba(0,255,136,0.06)'
+                  : isRelief ? 'rgba(255,107,53,0.06)'
+                  : isDecision ? 'rgba(255,184,0,0.05)'
+                  : 'transparent',
+              }}>
+                <span style={{
+                  fontSize: 9,
+                  fontFamily: 'var(--font-mono)',
+                  color: '#6A8AA8',
+                  flexShrink: 0,
+                  letterSpacing: '0.02em',
+                }}>{e.ts}</span>
+                <span style={{
+                  fontSize: 9,
+                  fontFamily: 'var(--font-display)',
+                  letterSpacing: '0.1em',
+                  color: agentColor || '#7A9AB8',
+                  fontWeight: 600,
+                  flexShrink: 0,
+                  minWidth: 28,
+                }}>{AGENT_LABELS[e.agent] || e.agent}</span>
+                {e.event && !isReasoning && (
                   <span style={{
                     fontSize: 9,
                     fontFamily: 'var(--font-display)',
-                    letterSpacing: '0.1em',
-                    color: agentColor || '#5A7A9A',
-                    fontWeight: 600,
+                    letterSpacing: '0.08em',
+                    color: isDispatch ? '#00FF88'
+                      : isDecision ? '#FFB800'
+                      : isClassified ? '#00CC66'
+                      : '#7A9AB8',
                     flexShrink: 0,
-                    minWidth: 28,
-                  }}>{AGENT_LABELS[e.agent] || e.agent}</span>
-                  {e.event && (
-                    <span style={{
-                      fontSize: 9,
-                      fontFamily: 'var(--font-display)',
-                      letterSpacing: '0.08em',
-                      color: '#4A6A8A',
-                      flexShrink: 0,
-                    }}>{e.event}</span>
-                  )}
-                  <span style={{
-                    fontSize: 11,
-                    fontFamily: 'var(--font-mono)',
-                    color: 'var(--text-primary)',
-                    lineHeight: 1.5,
-                    wordBreak: 'break-word',
-                  }}>{displayContent}</span>
-                </div>
-              )
-            })}
-          </div>
+                  }}>{e.event}</span>
+                )}
+                <div style={{
+                  fontSize: (isDecision || isDispatch || isRelief) ? 12 : isReasoning ? 10 : 11,
+                  fontFamily: 'var(--font-mono)',
+                  color: isDispatch ? '#00FF88'
+                    : isRelief ? '#FF6B35'
+                    : isReasoning ? '#5A7A9A'
+                    : isClassified ? '#00FF88'
+                    : isSensorHit ? '#7FFFD4'
+                    : isOrbit ? '#4A7A9A'
+                    : '#FFFFFF',
+                  lineHeight: 1.6,
+                  wordBreak: 'break-word',
+                  fontStyle: isReasoning ? 'italic' : 'normal',
+                  fontWeight: (isDecision || isDispatch || isRelief) ? 700 : 'normal',
+                  flex: 1,
+                }}>{formatContent(e.content)}</div>
+              </div>
+            )
+          })}
         </div>
       )}
 

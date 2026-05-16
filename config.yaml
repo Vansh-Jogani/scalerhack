@@ -7,19 +7,9 @@ mapbox:
 
 simulation:
   tick_rate_hz: 10
-  scenario: "sim/scenarios/fire.json"
+  scenario: "sim/scenarios/hyderabad_multi.json"
 
 models:
-  agent1: "claude-sonnet-4-20250514"
-  agent2: "claude-sonnet-4-20250514"
-  agent3: "claude-sonnet-4-20250514"
-
-alert_detector:
-  confidence_threshold: 70
-  poll_interval_seconds: 60
-  openaq_api_key: ""
-  hyderabad_bbox:
-    lat_min: 17.20
-    lat_max: 17.65
-    lon_min: 78.20
-    lon_max: 78.65
+  agent1: "claude-haiku-4-5-20251001"
+  agent2: "claude-haiku-4-5-20251001"
+  agent3: "claude-haiku-4-5-20251001"

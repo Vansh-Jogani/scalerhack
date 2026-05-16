@@ -99,151 +99,109 @@ def create_report_classification_handler(orchestrator, stream_callback=None, age
     return report_classification
 
 
-def create_request_detailed_pass_handler(world_state, drone_id: str):
-    """Create request_detailed_pass handler. Commands the drone for a lower-altitude orbit."""
-    async def request_detailed_pass(zone_lat: float, zone_lon: float, pass_altitude: float) -> dict:
-        # SPEC.md rule: never descend below 60m AGL
-        if pass_altitude < 60.0:
-            return {
-                "dispatched": False,
-                "message": "Altitude below 60m AGL is not permitted per operating rules.",
-            }
-        success = world_state.command_drone(drone_id, zone_lat, zone_lon, pass_altitude)
-        if success:
-            return {
-                "dispatched": True,
-                "drone_id": drone_id,
-                "pass_altitude": pass_altitude,
-            }
-        return {"dispatched": False, "message": f"Drone {drone_id} not found"}
-    return request_detailed_pass
-
-
-# ---------------------------------------------------------------------------
-# Agent 2 tools
-# ---------------------------------------------------------------------------
-
-ZONE_ANNOTATE_TOOL = {
-    "name": "zone_annotate",
-    "description": "Annotate a zone with a classification label and confidence. Writes to map layers.",
+REQUEST_BACKUP_TOOL = {
+    "name": "request_backup",
+    "description": "Request deployment of a specialist swarm. Call when confirmed incident warrants specialist response.",
     "input_schema": {
         "type": "object",
         "properties": {
-            "zone_id": {"type": "string", "description": "Zone ID in format ZONE-{description}"},
-            "label": {"type": "string", "description": "Classification label for the zone"},
-            "confidence": {"type": "number", "description": "Confidence level 0.0-1.0"},
+            "swarm_type": {
+                "type": "string",
+                "enum": ["fire", "structural_collapse", "flood", "industrial_hazard", "maritime_sar"],
+                "description": "Specialist swarm configuration to deploy",
+            },
+            "urgency": {
+                "type": "string",
+                "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+                "description": "Deployment urgency based on observed conditions",
+            },
+            "rationale": {
+                "type": "string",
+                "description": "Plain-language explanation for the request",
+            },
+            "estimated_casualties": {
+                "type": "integer",
+                "description": "Estimated persons at risk (0 if unknown)",
+            },
         },
-        "required": ["zone_id", "label", "confidence"],
+        "required": ["swarm_type", "urgency", "rationale", "estimated_casualties"],
     },
 }
 
-SURVIVOR_MARKER_TOOL = {
-    "name": "survivor_marker",
-    "description": "Mark a detected survivor location on the map with estimated count.",
+MAINTAIN_SURVEILLANCE_TOOL = {
+    "name": "maintain_surveillance",
+    "description": "Continue loitering without requesting backup. Use when situation is ambiguous or below deployment threshold.",
     "input_schema": {
         "type": "object",
         "properties": {
-            "lat": {"type": "number", "description": "Latitude of detected survivors"},
-            "lon": {"type": "number", "description": "Longitude of detected survivors"},
-            "count": {"type": "integer", "description": "Estimated number of survivors at this location"},
+            "reason": {
+                "type": "string",
+                "description": "Why specialist deployment is not yet warranted",
+            },
+            "reassess_in_seconds": {
+                "type": "integer",
+                "description": "Seconds before automatic reassessment",
+                "minimum": 10,
+                "maximum": 300,
+            },
         },
-        "required": ["lat", "lon", "count"],
+        "required": ["reason", "reassess_in_seconds"],
     },
 }
 
-REPORT_FINDINGS_TOOL = {
-    "name": "report_findings",
-    "description": "Report specialist swarm findings to orchestrator. Call after completing zone assessment.",
+
+def create_request_backup_handler(orchestrator):
+    async def request_backup(**kwargs) -> dict:
+        orchestrator.receive_agent1_decision({**kwargs, "name": "request_backup"})
+        return {"status": "ok", "message": f"Backup request received: {kwargs.get('swarm_type')} swarm"}
+    return request_backup
+
+
+def create_maintain_surveillance_handler(orchestrator):
+    async def maintain_surveillance(**kwargs) -> dict:
+        orchestrator.receive_agent1_decision({**kwargs, "name": "maintain_surveillance"})
+        return {"status": "ok", "message": f"Surveillance maintained. Reassess in {kwargs.get('reassess_in_seconds')}s"}
+    return maintain_surveillance
+
+
+ISSUE_ADVISORY_TOOL = {
+    "name": "issue_advisory",
+    "description": "Issue a structured advisory for first responders.",
     "input_schema": {
         "type": "object",
         "properties": {
-            "zones_assessed": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "zone_id": {"type": "string"},
-                        "label": {"type": "string"},
-                        "confidence": {"type": "number"},
-                        "risk_level": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
-                    },
-                    "required": ["zone_id", "label", "confidence", "risk_level"],
-                },
-            },
-            "survivor_detections": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "lat": {"type": "number"},
-                        "lon": {"type": "number"},
-                        "count": {"type": "integer"},
-                        "confidence": {"type": "number"},
-                    },
-                    "required": ["lat", "lon", "count", "confidence"],
-                },
-            },
-            "hazard_markers": {
+            "situation_summary": {"type": "string"},
+            "immediate_actions": {"type": "array", "items": {"type": "string"}, "maxItems": 5},
+            "exclusion_zones": {
                 "type": "array",
                 "items": {
                     "type": "object",
                     "properties": {
                         "lat": {"type": "number"},
                         "lon": {"type": "number"},
-                        "type": {"type": "string"},
-                        "exclusion_radius_m": {"type": "number"},
+                        "radius_m": {"type": "number"},
+                        "reason": {"type": "string"},
                     },
-                    "required": ["lat", "lon", "type", "exclusion_radius_m"],
+                    "required": ["lat", "lon", "radius_m", "reason"],
                 },
             },
-            "coverage_pct": {"type": "number", "description": "Percentage of area covered 0-100"},
-            "notes": {"type": "string"},
+            "resource_requirements": {"type": "array", "items": {"type": "string"}},
+            "risk_flags": {"type": "array", "items": {"type": "string"}},
+            "monitoring_status": {"type": "string"},
+            "last_updated": {"type": "string"},
+            "based_on": {
+                "type": "object",
+                "properties": {
+                    "incident_id": {"type": "string"},
+                    "coverage_pct": {"type": "number"},
+                },
+                "required": ["incident_id", "coverage_pct"],
+            },
         },
-        "required": ["zones_assessed", "survivor_detections", "hazard_markers", "coverage_pct", "notes"],
+        "required": [
+            "situation_summary", "immediate_actions", "exclusion_zones",
+            "resource_requirements", "risk_flags", "monitoring_status",
+            "last_updated", "based_on",
+        ],
     },
 }
-
-
-def create_zone_annotate_handler():
-    """Create zone_annotate handler. Returns annotation for state.map_layers."""
-    async def zone_annotate(zone_id: str, label: str, confidence: float) -> dict:
-        annotation = {
-            "zone_id": zone_id,
-            "label": label,
-            "confidence": confidence,
-        }
-        return {"status": "ok", "annotation": annotation}
-    return zone_annotate
-
-
-def create_survivor_marker_handler():
-    """Create survivor_marker handler. Fires Omium span."""
-    async def survivor_marker(lat: float, lon: float, count: int) -> dict:
-        with tracer.start_span("agent2.survivor_marker", lat=lat, lon=lon, count=count):
-            marker = {"lat": lat, "lon": lon, "count": count}
-        return {"status": "ok", "marker": marker}
-    return survivor_marker
-
-
-def create_report_findings_handler(orchestrator, stream_callback=None, agent_id: str = "agent-2"):
-    """Create report_findings handler. Writes to orchestrator and emits completed event."""
-    async def report_findings(**kwargs) -> dict:
-        orchestrator.receive_agent2_report(kwargs)
-
-        # Emit completed event
-        if stream_callback:
-            try:
-                await stream_callback("agent_stream", {
-                    "agent_id": agent_id,
-                    "event": "completed",
-                    "content": {
-                        "coverage_pct": kwargs.get("coverage_pct", 0),
-                        "zones_assessed": len(kwargs.get("zones_assessed", [])),
-                    },
-                })
-            except Exception as e:
-                import structlog as _sl
-                _sl.get_logger().warning("report_findings_emit_error", error=str(e))
-
-        return {"status": "ok", "message": "Findings reported to orchestrator"}
-    return report_findings

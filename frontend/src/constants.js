@@ -44,6 +44,7 @@ export const AGENT_COLORS = {
   AGENT_1: '#7B68EE',
   AGENT_2: null, // set to active incident disaster color
   AGENT_3: '#00FF88',
+  AGENT_4: '#FF6B35',
 }
 
 export const DEFAULT_CENTER = [78.39, 17.44]

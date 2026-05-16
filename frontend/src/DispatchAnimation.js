@@ -1,4 +1,4 @@
-import mapboxgl from 'mapbox-gl'
+import L from 'leaflet'
 import { DISASTER_LABELS } from './constants.js'
 
 // ── Geometry helpers ──────────────────────────────────────────────────────────
@@ -27,12 +27,8 @@ export function findNearestCentre(polygonVertices, responseCentres) {
   return nearest
 }
 
-export function geoToPixel(map, lng, lat) {
-  return map.project([lng, lat])
-}
-
-export function calcBearing(srcLng, srcLat, dstLng, dstLat) {
-  const dLon = (dstLng - srcLng) * Math.PI / 180
+export function calcBearing(srcLon, srcLat, dstLon, dstLat) {
+  const dLon = (dstLon - srcLon) * Math.PI / 180
   const lat1 = srcLat * Math.PI / 180
   const lat2 = dstLat * Math.PI / 180
   const y = Math.sin(dLon) * Math.cos(lat2)
@@ -56,6 +52,55 @@ function arrowSVG(colour) {
   </svg>`
 }
 
+function droneWithPayloadSVG(disasterColour, stateColour, disasterType) {
+  const type = (disasterType || '').toLowerCase()
+
+  const payloads = {
+    fire: `
+      <line x1="14" y1="28" x2="14" y2="33" stroke="rgba(255,255,255,0.5)" stroke-width="0.8"/>
+      <path d="M12 32 Q14 28.5 16 32 Q16.5 30 14 28 Q11.5 30 12 32Z" fill="#FF8C00"/>
+      <rect x="10.5" y="32" width="7" height="10" rx="1.5" fill="${disasterColour}" stroke="rgba(255,255,255,0.4)" stroke-width="0.5"/>
+      <rect x="10" y="31.5" width="8" height="2" rx="1" fill="#AA0000"/>
+    `,
+    flood: `
+      <line x1="14" y1="28" x2="14" y2="33" stroke="rgba(255,255,255,0.5)" stroke-width="0.8"/>
+      <rect x="9" y="33" width="10" height="9" rx="1.5" fill="#2196F3" stroke="rgba(255,255,255,0.4)" stroke-width="0.5"/>
+      <path d="M9 37 Q11.5 35 14 37 Q16.5 35 19 37" stroke="rgba(255,255,255,0.7)" stroke-width="0.8" fill="none"/>
+    `,
+    structural_collapse: `
+      <line x1="14" y1="28" x2="14" y2="33" stroke="rgba(255,255,255,0.5)" stroke-width="0.8"/>
+      <rect x="9" y="33" width="10" height="9" rx="1" fill="#FF8C42" stroke="rgba(255,255,255,0.4)" stroke-width="0.5"/>
+      <text x="14" y="41" text-anchor="middle" fill="white" font-family="monospace" font-size="5" font-weight="bold">SOS</text>
+    `,
+    industrial_hazard: `
+      <line x1="14" y1="28" x2="14" y2="33" stroke="rgba(255,255,255,0.5)" stroke-width="0.8"/>
+      <polygon points="14,33 9,42 19,42" fill="#9E9E9E" stroke="rgba(255,255,255,0.4)" stroke-width="0.5"/>
+      <text x="14" y="41" text-anchor="middle" fill="#FFE566" font-family="monospace" font-size="7" font-weight="bold">!</text>
+    `,
+    maritime_sar: `
+      <line x1="14" y1="28" x2="14" y2="33" stroke="rgba(255,255,255,0.5)" stroke-width="0.8"/>
+      <circle cx="14" cy="38" r="5" fill="none" stroke="#00CED1" stroke-width="2.5"/>
+      <circle cx="14" cy="38" r="2" fill="#00CED1"/>
+    `,
+  }
+
+  const payload = payloads[type] || payloads.fire
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="48" viewBox="0 0 28 48">
+    <line x1="14" y1="14" x2="20" y2="8"  stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="14" y1="14" x2="8"  y2="8"  stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="14" y1="14" x2="20" y2="20" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="14" y1="14" x2="8"  y2="20" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="20" cy="8"  r="4" fill="${disasterColour}" stroke="white" stroke-width="0.5"/>
+    <circle cx="8"  cy="8"  r="4" fill="${disasterColour}" stroke="white" stroke-width="0.5"/>
+    <circle cx="20" cy="20" r="4" fill="${disasterColour}" stroke="white" stroke-width="0.5"/>
+    <circle cx="8"  cy="20" r="4" fill="${disasterColour}" stroke="white" stroke-width="0.5"/>
+    <circle cx="14" cy="14" r="4" fill="white"/>
+    <circle cx="14" cy="14" r="2.5" fill="${stateColour}"/>
+    ${payload}
+  </svg>`
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const ease = (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
@@ -64,46 +109,40 @@ function fireAgentEvent(agent, text) {
   window.dispatchEvent(new CustomEvent('aria-agent-event', { detail: { agent, text } }))
 }
 
-function emptyLineString() {
-  return { type: 'Feature', geometry: { type: 'LineString', coordinates: [] }, properties: {} }
-}
-
-// ── DispatchAnimation ─────────────────────────────────────────────────────────
+// ── DispatchAnimation (Leaflet) ──────────────────────────────────────────────
 
 class DispatchAnimation {
   constructor(map, { srcGeo, dstGeo, droneCount, disasterColour, disasterType }) {
     this._map         = map
-    this._src         = srcGeo        // { lat, lon }
-    this._dst         = dstGeo        // { lat, lon }
+    this._src         = srcGeo
+    this._dst         = dstGeo
     this._N           = droneCount
     this._colour      = disasterColour
     this._type        = disasterType
 
     this._rafId       = null
+    this._launchTimer = null
     this._completeCb  = null
 
-    // Fixed-wing
     this._fwEl        = null
     this._fwMarker    = null
     this._orbitAngle  = 0
+    this._fwTrail     = null
     this._fwTrailPts  = []
 
-    // Dispatch arrow
     this._arrowEl     = null
     this._arrowMarker = null
+    this._dispatchTrail = null
 
-    // Patrol drones — positions now driven by backend telemetry via DroneDotLayer
+    this._droneEls       = []
+    this._droneMarkers   = []
+    this._droneAngles    = []
     this._patrolCenters  = []
     this._droneAngles    = []
 
-    // Assessment panel
     this._assessPanel = null
+    this._burstCircles = []
 
-    // Mapbox layer/source tracking for cleanup
-    this._layerIds  = []
-    this._sourceIds = []
-
-    // Ellipse orbit radii (degrees)
     this._Rx = 0.0014
     this._Ry = 0.0014 * 0.7
   }
@@ -114,19 +153,16 @@ class DispatchAnimation {
 
   stop() {
     if (this._rafId) { cancelAnimationFrame(this._rafId); this._rafId = null }
-
-    for (const id of this._layerIds) {
-      try { if (this._map.getLayer(id)) this._map.removeLayer(id) } catch (_) {}
-    }
-    for (const id of this._sourceIds) {
-      try { if (this._map.getSource(id)) this._map.removeSource(id) } catch (_) {}
-    }
-    this._layerIds  = []
-    this._sourceIds = []
-
-    if (this._fwMarker)    { this._fwMarker.remove();    this._fwMarker    = null }
-    if (this._arrowMarker) { this._arrowMarker.remove(); this._arrowMarker = null }
-
+    if (this._launchTimer) { clearTimeout(this._launchTimer); this._launchTimer = null }
+    if (this._fwMarker) { this._map.removeLayer(this._fwMarker); this._fwMarker = null }
+    if (this._fwTrail) { this._map.removeLayer(this._fwTrail); this._fwTrail = null }
+    if (this._arrowMarker) { this._map.removeLayer(this._arrowMarker); this._arrowMarker = null }
+    if (this._dispatchTrail) { this._map.removeLayer(this._dispatchTrail); this._dispatchTrail = null }
+    for (const m of this._droneMarkers) this._map.removeLayer(m)
+    for (const c of this._burstCircles) this._map.removeLayer(c)
+    this._droneMarkers = []
+    this._droneEls = []
+    this._burstCircles = []
     if (this._assessPanel?.parentNode) {
       this._assessPanel.parentNode.removeChild(this._assessPanel)
       this._assessPanel = null
@@ -134,27 +170,6 @@ class DispatchAnimation {
   }
 
   // ── Internal helpers ───────────────────────────────────────────────────────
-
-  _addSource(id, data) {
-    if (!this._map.getSource(id)) {
-      this._map.addSource(id, { type: 'geojson', data })
-      this._sourceIds.push(id)
-    }
-  }
-
-  _addLayer(def) {
-    if (!this._map.getLayer(def.id)) {
-      this._map.addLayer(def)
-      this._layerIds.push(def.id)
-    }
-  }
-
-  _removeLayerAndSource(layerId, sourceId) {
-    try { if (this._map.getLayer(layerId))   this._map.removeLayer(layerId)   } catch (_) {}
-    try { if (this._map.getSource(sourceId)) this._map.removeSource(sourceId) } catch (_) {}
-    this._layerIds  = this._layerIds.filter(id => id !== layerId)
-    this._sourceIds = this._sourceIds.filter(id => id !== sourceId)
-  }
 
   _orbitPoint(a) {
     return {
@@ -175,22 +190,14 @@ class DispatchAnimation {
     return (Math.atan2(Math.cos(a) * this._Ry, -Math.sin(a) * this._Rx) + Math.PI / 2) * 180 / Math.PI
   }
 
-  _setFwTrail() {
-    this._map.getSource('fw-trail-source')?.setData({
-      type: 'Feature',
-      geometry: { type: 'LineString', coordinates: this._fwTrailPts },
-      properties: {},
-    })
-  }
-
   _advanceFwOrbit() {
     this._orbitAngle += 0.038
     const pt = this._orbitPoint(this._orbitAngle)
-    if (this._fwMarker) this._fwMarker.setLngLat([pt.lon, pt.lat])
-    if (this._fwEl)     this._fwEl.style.transform = `rotate(${this._fwHeadingDeg(this._orbitAngle)}deg)`
-    this._fwTrailPts.push([pt.lon, pt.lat])
+    if (this._fwMarker) this._fwMarker.setLatLng([pt.lat, pt.lon])
+    if (this._fwEl) this._fwEl.style.transform = `rotate(${this._fwHeadingDeg(this._orbitAngle)}deg)`
+    this._fwTrailPts.push([pt.lat, pt.lon])
     if (this._fwTrailPts.length > 90) this._fwTrailPts.shift()
-    this._setFwTrail()
+    if (this._fwTrail) this._fwTrail.setLatLngs(this._fwTrailPts)
   }
 
   // ── Phase 1: Fixed-wing departs to orbit entry point ──────────────────────
@@ -201,37 +208,30 @@ class DispatchAnimation {
 
     fireAgentEvent('ORCHESTRATOR', 'SURVEILLANCE_ACTIVE — Agent 1 dispatched · fixed-wing en route')
 
-    this._addSource('fw-trail-source', emptyLineString())
-    this._addLayer({
-      id: 'fw-trail',
-      type: 'line',
-      source: 'fw-trail-source',
-      paint: { 'line-color': this._colour, 'line-width': 1.5, 'line-dasharray': [4, 4], 'line-opacity': 0.45 },
-    })
+    this._fwTrail = L.polyline([], {
+      color: this._colour, weight: 1.5, dashArray: '4 4', opacity: 0.45,
+    }).addTo(this._map)
 
     const bearingDeg = calcBearing(this._src.lon, this._src.lat, entry.lon, entry.lat) * 180 / Math.PI
-    this._fwEl = document.createElement('div')
-    this._fwEl.style.cssText = 'width:34px;height:32px;pointer-events:none;'
-    this._fwEl.style.transform = `rotate(${bearingDeg}deg)`
-    this._fwEl.innerHTML = fixedWingSVG(this._colour)
-    this._fwMarker = new mapboxgl.Marker({ element: this._fwEl, anchor: 'center' })
-      .setLngLat([this._src.lon, this._src.lat])
-      .addTo(this._map)
+    const fwHtml = `<div class="fw-icon" style="width:34px;height:34px;transform:rotate(${bearingDeg}deg)">${fixedWingSVG(this._colour)}</div>`
+    const icon = L.divIcon({ className: '', html: fwHtml, iconSize: [34, 32], iconAnchor: [17, 16] })
+    this._fwMarker = L.marker([this._src.lat, this._src.lon], { icon, interactive: false }).addTo(this._map)
+    this._fwEl = this._fwMarker.getElement()?.querySelector('.fw-icon') || null
 
     const animStart = performance.now()
-    const srcLon = this._src.lon, srcLat = this._src.lat
-    const dstLon = entry.lon,     dstLat = entry.lat
+    const srcLat = this._src.lat, srcLon = this._src.lon
+    const dstLat = entry.lat, dstLon = entry.lon
 
     const tick = (now) => {
-      const t  = Math.min((now - animStart) / 2200, 1)
+      const t = Math.min((now - animStart) / 2200, 1)
       const te = ease(t)
-      const lon = srcLon + (dstLon - srcLon) * te
       const lat = srcLat + (dstLat - srcLat) * te
+      const lon = srcLon + (dstLon - srcLon) * te
 
-      this._fwMarker.setLngLat([lon, lat])
-      this._fwTrailPts.push([lon, lat])
+      this._fwMarker.setLatLng([lat, lon])
+      this._fwTrailPts.push([lat, lon])
       if (this._fwTrailPts.length > 90) this._fwTrailPts.shift()
-      this._setFwTrail()
+      this._fwTrail.setLatLngs(this._fwTrailPts)
 
       if (t < 1) {
         this._rafId = requestAnimationFrame(tick)
@@ -257,12 +257,12 @@ class DispatchAnimation {
       accumulated += 0.038
 
       const pt = this._orbitPoint(a)
-      this._fwMarker.setLngLat([pt.lon, pt.lat])
-      this._fwEl.style.transform = `rotate(${this._fwHeadingDeg(a)}deg)`
+      this._fwMarker.setLatLng([pt.lat, pt.lon])
+      if (this._fwEl) this._fwEl.style.transform = `rotate(${this._fwHeadingDeg(a)}deg)`
 
-      this._fwTrailPts.push([pt.lon, pt.lat])
+      this._fwTrailPts.push([pt.lat, pt.lon])
       if (this._fwTrailPts.length > 90) this._fwTrailPts.shift()
-      this._setFwTrail()
+      if (this._fwTrail) this._fwTrail.setLatLngs(this._fwTrailPts)
       this._orbitAngle = a
 
       if (accumulated < totalAngle) {
@@ -304,7 +304,7 @@ class DispatchAnimation {
       'opacity:0',
       'transition:opacity 500ms ease',
       'pointer-events:none',
-      'z-index:10',
+      'z-index:1000',
     ].join(';')
 
     panel.innerHTML = `
@@ -324,13 +324,10 @@ class DispatchAnimation {
 
     this._map.getContainer().appendChild(panel)
     this._assessPanel = panel
-
     requestAnimationFrame(() => { panel.style.opacity = '1' })
 
-    // Agent 2 starts concurrently
     this._phase4_dispatch()
 
-    // Hide after 2600ms; fw to 50% once panel gone
     setTimeout(() => {
       panel.style.opacity = '0'
       setTimeout(() => {
@@ -346,42 +343,31 @@ class DispatchAnimation {
   _phase4_dispatch() {
     fireAgentEvent('ORCHESTRATOR', `SWARM_ACTIVE — Agent 2 deploying ${this._N} response drones`)
 
-    this._addSource('dispatch-trail-source', emptyLineString())
-    this._addLayer({
-      id: 'dispatch-trail',
-      type: 'line',
-      source: 'dispatch-trail-source',
-      paint: { 'line-color': this._colour, 'line-width': 1.5, 'line-dasharray': [4, 4], 'line-opacity': 0.45 },
-    })
+    this._dispatchTrail = L.polyline([], {
+      color: this._colour, weight: 1.5, dashArray: '4 4', opacity: 0.45,
+    }).addTo(this._map)
 
     const bearingDeg = calcBearing(this._src.lon, this._src.lat, this._dst.lon, this._dst.lat) * 180 / Math.PI
-    this._arrowEl = document.createElement('div')
-    this._arrowEl.style.cssText = 'width:14px;height:20px;pointer-events:none;'
-    this._arrowEl.style.transform = `rotate(${bearingDeg}deg)`
-    this._arrowEl.innerHTML = arrowSVG(this._colour)
-    this._arrowMarker = new mapboxgl.Marker({ element: this._arrowEl, anchor: 'center' })
-      .setLngLat([this._src.lon, this._src.lat])
-      .addTo(this._map)
+    const arrowHtml = `<div class="arrow-icon" style="width:14px;height:20px;transform:rotate(${bearingDeg}deg)">${arrowSVG(this._colour)}</div>`
+    const icon = L.divIcon({ className: '', html: arrowHtml, iconSize: [14, 20], iconAnchor: [7, 10] })
+    this._arrowMarker = L.marker([this._src.lat, this._src.lon], { icon, interactive: false }).addTo(this._map)
+    this._arrowEl = this._arrowMarker.getElement()?.querySelector('.arrow-icon') || null
 
     const trailPts = []
     const animStart = performance.now()
-    const srcLon = this._src.lon, srcLat = this._src.lat
-    const dstLon = this._dst.lon, dstLat = this._dst.lat
+    const srcLat = this._src.lat, srcLon = this._src.lon
+    const dstLat = this._dst.lat, dstLon = this._dst.lon
 
     const tick = (now) => {
-      const t  = Math.min((now - animStart) / 1900, 1)
+      const t = Math.min((now - animStart) / 1900, 1)
       const te = ease(t)
-      const lon = srcLon + (dstLon - srcLon) * te
       const lat = srcLat + (dstLat - srcLat) * te
+      const lon = srcLon + (dstLon - srcLon) * te
 
-      this._arrowMarker.setLngLat([lon, lat])
-      trailPts.push([lon, lat])
+      this._arrowMarker.setLatLng([lat, lon])
+      trailPts.push([lat, lon])
       if (trailPts.length > 60) trailPts.shift()
-      this._map.getSource('dispatch-trail-source')?.setData({
-        type: 'Feature',
-        geometry: { type: 'LineString', coordinates: trailPts },
-        properties: {},
-      })
+      this._dispatchTrail.setLatLngs(trailPts)
 
       if (t < 1) {
         this._rafId = requestAnimationFrame(tick)
@@ -396,56 +382,42 @@ class DispatchAnimation {
   // ── Phase 5: Burst — arrow gone, rings expand ────────────────────────────
 
   _phase5_burst() {
-    if (this._arrowMarker) { this._arrowMarker.remove(); this._arrowMarker = null }
+    if (this._arrowMarker) { this._map.removeLayer(this._arrowMarker); this._arrowMarker = null }
     if (this._fwEl) this._fwEl.style.opacity = '0.4'
 
-    fireAgentEvent('AGENT_2', 'Swarm on target — establishing patrol pattern')
-
-    // Burst ring sources + layers
-    const burstGeo = {
-      type: 'Feature',
-      geometry: { type: 'Point', coordinates: [this._dst.lon, this._dst.lat] },
-      properties: {},
-    }
-    this._addSource('dispatch-burst-source', burstGeo)
-    this._addLayer({
-      id: 'dispatch-burst-ring-1',
-      type: 'circle',
-      source: 'dispatch-burst-source',
-      paint: { 'circle-radius': 0, 'circle-color': 'transparent', 'circle-stroke-width': 2, 'circle-stroke-color': this._colour, 'circle-stroke-opacity': 0.6 },
-    })
-    this._addLayer({
-      id: 'dispatch-burst-ring-2',
-      type: 'circle',
-      source: 'dispatch-burst-source',
-      paint: { 'circle-radius': 0, 'circle-color': 'transparent', 'circle-stroke-width': 1.5, 'circle-stroke-color': this._colour, 'circle-stroke-opacity': 0.6 },
-    })
+    fireAgentEvent('AGENT_2', `Swarm inbound from ${this._src.name || 'response centre'} — ${this._N} drones en route`)
 
     const burstStart = performance.now()
+    const ring1 = L.circle([this._dst.lat, this._dst.lon], {
+      radius: 0, color: this._colour, fillColor: 'transparent',
+      weight: 2, opacity: 0.6, fill: false,
+    }).addTo(this._map)
+    const ring2 = L.circle([this._dst.lat, this._dst.lon], {
+      radius: 0, color: this._colour, fillColor: 'transparent',
+      weight: 1.5, opacity: 0.6, fill: false,
+    }).addTo(this._map)
+    this._burstCircles.push(ring1, ring2)
+
     const animateBurst = (now) => {
       const elapsed = now - burstStart
       const t1 = Math.min(elapsed / 600, 1)
-      try {
-        this._map.setPaintProperty('dispatch-burst-ring-1', 'circle-radius', t1 * 80)
-        this._map.setPaintProperty('dispatch-burst-ring-1', 'circle-stroke-opacity', 0.6 * (1 - t1))
-      } catch (_) {}
+      ring1.setRadius(t1 * 200)
+      ring1.setStyle({ opacity: 0.6 * (1 - t1) })
       if (elapsed > 200) {
         const t2 = Math.min((elapsed - 200) / 900, 1)
-        try {
-          this._map.setPaintProperty('dispatch-burst-ring-2', 'circle-radius', t2 * 80)
-          this._map.setPaintProperty('dispatch-burst-ring-2', 'circle-stroke-opacity', 0.6 * (1 - t2))
-        } catch (_) {}
+        ring2.setRadius(t2 * 200)
+        ring2.setStyle({ opacity: 0.6 * (1 - t2) })
       }
       if (elapsed < 1200) {
         requestAnimationFrame(animateBurst)
       } else {
-        this._removeLayerAndSource('dispatch-burst-ring-1', 'dispatch-burst-source')
-        this._removeLayerAndSource('dispatch-burst-ring-2', 'dispatch-burst-source')
+        this._map.removeLayer(ring1)
+        this._map.removeLayer(ring2)
+        this._burstCircles = this._burstCircles.filter(c => c !== ring1 && c !== ring2)
       }
     }
     requestAnimationFrame(animateBurst)
 
-    // Compute patrol centres (used for reference only — drones appear via telemetry)
     for (let i = 0; i < this._N; i++) {
       const angle = (i / this._N) * 2 * Math.PI + (Math.random() - 0.5) * 0.4
       this._patrolCenters.push({
@@ -453,21 +425,51 @@ class DispatchAnimation {
         lat: this._dst.lat + Math.sin(angle) * 0.0006,
       })
       this._droneAngles.push(angle)
+
+      const droneHtml = `<div class="dispatch-drone" style="width:28px;height:48px;transform:scale(0.4);opacity:0;transition:transform 400ms ease-out, opacity 400ms ease-out">${droneWithPayloadSVG(this._colour, '#00FF88', this._type)}</div>`
+      const droneIcon = L.divIcon({ className: '', html: droneHtml, iconSize: [28, 48], iconAnchor: [14, 14] })
+      const marker = L.marker([this._src.lat, this._src.lon], { icon: droneIcon, interactive: false }).addTo(this._map)
+      this._droneMarkers.push(marker)
+
+      const el = marker.getElement()?.querySelector('.dispatch-drone') || null
+      this._droneEls.push(el)
+
+      // staggered pop-in at the response centre before departing
+      const delay = i * 120
+      setTimeout(() => {
+        if (el) { el.style.transform = 'scale(1)'; el.style.opacity = '1' }
+      }, delay)
     }
 
-    // Keep fw orbiting during burst, then move to patrol phase
-    const moveStart = performance.now()
-    const moveTick = (now) => {
-      const t = Math.min((now - moveStart) / 800, 1)
-      this._advanceFwOrbit()
-      if (t < 1) {
-        this._rafId = requestAnimationFrame(moveTick)
-      } else {
-        this._rafId = null
-        this._phase6_patrol()
+    // brief hold at centre so drones are visible before launch
+    this._launchTimer = setTimeout(() => {
+      this._launchTimer = null
+      const moveStart = performance.now()
+      const srcLat = this._src.lat, srcLon = this._src.lon
+
+      const moveTick = (now) => {
+        const t = Math.min((now - moveStart) / 2500, 1)
+        const te = ease(t)
+
+        for (let i = 0; i < this._N; i++) {
+          const pc = this._patrolCenters[i]
+          const lat = srcLat + (pc.lat - srcLat) * te
+          const lon = srcLon + (pc.lon - srcLon) * te
+          this._droneMarkers[i].setLatLng([lat, lon])
+        }
+
+        this._advanceFwOrbit()
+
+        if (t < 1) {
+          this._rafId = requestAnimationFrame(moveTick)
+        } else {
+          for (const el of this._droneEls) { if (el) el.style.transition = 'none' }
+          this._rafId = null
+          this._phase6_patrol()
+        }
       }
-    }
-    this._rafId = requestAnimationFrame(moveTick)
+      this._rafId = requestAnimationFrame(moveTick)
+    }, this._N * 120 + 300)
   }
 
   // ── Phase 6: Continuous patrol — fixed-wing only ─────────────────────────
@@ -480,6 +482,22 @@ class DispatchAnimation {
     // Only the fixed-wing continues orbiting — rotary drones appear via telemetry
     const tick = () => {
       this._advanceFwOrbit()
+
+      for (let i = 0; i < this._N; i++) {
+        const dir = i % 2 === 0 ? 1 : -1
+        this._droneAngles[i] += dir * 0.04
+
+        const pc = this._patrolCenters[i]
+        const a = this._droneAngles[i]
+        const lon = pc.lon + Math.cos(a) * 0.00016
+        const lat = pc.lat + Math.sin(a) * 0.00016
+
+        this._droneMarkers[i].setLatLng([lat, lon])
+
+        const hDeg = (a + (dir > 0 ? Math.PI / 2 : -Math.PI / 2)) * 180 / Math.PI
+        if (this._droneEls[i]) this._droneEls[i].style.transform = `rotate(${hDeg}deg)`
+      }
+
       this._rafId = requestAnimationFrame(tick)
     }
     this._rafId = requestAnimationFrame(tick)

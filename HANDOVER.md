@@ -4,65 +4,27 @@
 > Add an entry after: stage completion, blocker hit, architectural decision, end of session.
 > Format below. Keep entries tight — full prose belongs in `CONTEXT.md`.
 
-## [2026-05-16 SESSION] — Bug fixes: 8 reconciliation issues resolved, 61/61 tests passing
-**Stage:** Stage 5 — Demo Polish (pre-flight fixes)
-**State:** working
-**What got done:**
-- config.yaml: model names corrected to `claude-sonnet-4-20250514` (were `claude-sonnet-4-6`)
-- agent2_specialist.py: full rewrite — now inherits BaseAgent, accepts `swarm_config` as injected param (no self-selection), removed duplicate SWARM_CAPABILITIES dict, removed duplicate REPORT_FINDINGS_TOOL, added all 6 SPEC.md tools (fly_to, loiter_over, get_sensor_reading, zone_annotate, survivor_marker, report_findings), renamed `run()` → `run_mission()` to match orchestrator call site, added arrival timeout
-- orchestrator.py: wired AsyncSqliteSaver (langgraph-checkpoint-sqlite 3.1.0), added `_build_graph_with_checkpointer()`, fixed `_advisory_node` `dir()` bug → proper `advisory: dict = {}` init, enriched `receive_agent1_report()` to inject area context so Agent 2 knows where to deploy
-- base_agent.py: added `register_tool()` method (used by tests)
-- tests/test_base_agent.py: fixed `make_agent` fixture (added sensor_overlay + tool_handlers), fixed 2 test assertions to match actual BaseAgent behaviour
-- requirements.txt: added `langgraph-checkpoint-sqlite>=3.0`
-**What's next:**
-- Stage 5 — Demo Polish: second scenario, multi-incident test, demo script
-**Blockers / open questions:**
-- none
-**Files touched:**
-- config.yaml
-- agents/agent2_specialist.py (full rewrite)
-- agents/base_agent.py (added register_tool)
-- orchestrator/orchestrator.py (SqliteSaver, advisory fix, area enrichment)
-- requirements.txt (langgraph-checkpoint-sqlite)
-- tests/test_base_agent.py (fixture + assertion fixes)
-**Notes for next session:**
-- langgraph-checkpoint-sqlite 3.1.0 installed, import path: `langgraph.checkpoint.sqlite.aio.AsyncSqliteSaver`
-- All 8 reconciliation bugs resolved. Architecture is now clean per SPEC.md.
-- 61/61 tests passing
+2026-05-16 — Stage 2 rebuild complete — recreated all lost changes from handover notes; 62/62 tests passing
+**What was rebuilt:**
+- prompts/registry.py + 8 markdown prompt files (agent1/2/3 + _shared/safety_rules/output_contracts/notes)
+- agents/messages.py: SurveillanceReport, SwarmFindings, IncidentBriefing, WorldEvent Pydantic models
+- orchestrator/event_bus.py: async pub-sub, 500ms coalesce, 60s heartbeat
+- agents/tools/schemas.py: ISSUE_ADVISORY_TOOL added to report_tools.py
+- sim/sensor_overlay.py: radius-based (set_incident takes center_lat, center_lon, radius_m, disaster_type)
+- sim/world_state.py: zones, survivor_markers, hazard_markers + add/get methods
+- agents/agent1_surveillance.py: registry, tool_choice=report_classification, loiter-to-center, prompt_version_hash
+- agents/agent2_specialist.py: registry, fill_template, incident_id, prompt_version_hash injection
+- agents/agent3_advisory.py: Claude API (no Ollama), tool_choice=issue_advisory, registry, simplified constructor
+- orchestrator/orchestrator.py: full LangGraph rewrite — ARIAState TypedDict, graph START→surveillance→swarm→advisory→END, asyncio.Future bridge, EventBus wired (5 trigger types, 500ms coalesce, heartbeat)
+- config.yaml: removed agent3_endpoint/agent3_model, added agent2/agent3 (all claude-haiku-4-5)
+- requirements.txt: langgraph>=0.2, langgraph-checkpoint-sqlite>=1.0, aiosqlite>=0.20, typing_extensions>=4.0
+- main.py: LangGraph AsyncSqliteSaver in lifespan, /api/incident/create endpoint, zone/survivor broadcast, model_a1/a2/a3 constructor
+- frontend/src/App.jsx: advisory/zones/survivors from WS broadcast
+- frontend/src/MapStateManager.js: add_zone action with colored dashed circles
+- tests/test_sensor_and_tools.py: updated for radius-based SensorOverlay API (62 tests pass)
+**Next:** Deploy with ANTHROPIC_API_KEY in .env and verify Stage 2 CPs 7–11 live
 
-## [2026-05-16 01:48] — Stages 2-4 complete — full backend agent layer implemented
-**Stage:** Stage 4 (COMPLETE — all checkpoints verified)
-**State:** working
-**What got done:**
-- **Stage 2:** BaseAgent OODA-R loop with multi-turn tool use + Omium tracer. Agent 1 SurveillanceAgent inherits BaseAgent, uses verbatim SPEC.md prompt. 5 tools: fly_to, loiter_over, get_sensor_reading, report_classification, request_detailed_pass. rtl + abort also implemented.
-- **Stage 3:** LangGraph StateGraph orchestrator (deterministic, no LLM). SqliteSaver-ready. 6 nodes: standby → surveillance → classify → swarm → advisory → END. Classifier is pure SWARM_CAPABILITIES lookup (no NLP). IncidentManager: create-or-queue only (V1). Agent 2 SpecialistAgent inherits BaseAgent, receives swarm_config from classifier, does NOT choose it. 6 tools: fly_to, loiter_over, get_sensor_reading, zone_annotate, survivor_marker, report_findings.
-- **Stage 4:** Agent 3 AdvisoryAgent — event-driven (not a loop), Claude API (user overrode SPEC.md Ollama), verbatim 6-section SPEC.md prompt, validation+retry, 15s debounce on agent_2_findings_updated, error advisory fallback. WorldState.schedule_event() for fire growth. main.py: /api/incident/create REST endpoint, 60s heartbeat loop for Agent 3, 90s fire growth world event.
-- **Architecture enforcement verified:** No LLM in orchestrator/classifier, no cross-agent state writes, no Ollama references, no recommended_swarm in report_classification, all sub-key ownership correct.
-**What's next:**
-- Stage 5 — Demo Polish
-**Blockers / open questions:**
-- none
-**Files touched:**
-- config.yaml (model → claude-sonnet-4-20250514 for all 3 agents)
-- agents/base_agent.py (full rewrite — OODA-R + multi-turn + tracer)
-- agents/agent1_surveillance.py (rewrite — inherits BaseAgent, verbatim SPEC.md prompt)
-- agents/agent2_specialist.py (rewrite — inherits BaseAgent, receives swarm_config)
-- agents/agent3_advisory.py (rewrite — Claude API, event-driven, 6-section output)
-- agents/tools/flight_tools.py (added loiter_over, rtl, abort)
-- agents/tools/report_tools.py (rewrote: removed recommended_swarm, added request_detailed_pass, zone_annotate, survivor_marker)
-- orchestrator/orchestrator.py (full LangGraph rewrite)
-- orchestrator/classifier.py (rewrite — pure lookup, no NLP)
-- orchestrator/incident_manager.py (simplified — removed reassign_resources)
-- sim/world_state.py (added schedule_event)
-- sim_layer/tracer.py (fixed structlog kwarg collision)
-- main.py (rewrote — /api/incident/create, heartbeat, world events, no Ollama)
-- requirements.txt (added langgraph, aiosqlite)
-**Notes for next session:**
-- User decision: Agent 3 uses Claude API, not Ollama — record in CONTEXT.md
-- All 3 agents use claude-sonnet-4-20250514
-- LangGraph installed as langgraph 1.2.0
-- 25 checkpoint tests passed across all 3 stages
-
+---
 
 2026-05-16 — two-agent dispatch animation complete — fixed-wing surveillance orbit + assessment panel + rotary swarm burst sequence — DispatchAnimation.js created, Map.jsx + AgentFeed.jsx updated, clean build
 

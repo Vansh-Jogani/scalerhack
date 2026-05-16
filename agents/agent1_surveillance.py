@@ -1,71 +1,62 @@
 """Agent 1 — Surveillance Agent.
 
-Inherits BaseAgent. Uses the OODA-R loop to fly to incident coordinates,
-survey the area, collect sensor data, classify the incident, and report
-to the orchestrator.
-
-System prompt is EXACTLY from SPEC.md AGENT_1_SYSTEM_PROMPT.
-The LLM drives the survey — it decides tool call sequences.
+Flies expanding circle survey pattern to locate and classify incidents.
+Does NOT receive disaster_type — classifies from sensor data alone.
+After classification, makes an explicit decision: request backup or maintain surveillance.
 """
 
 import structlog
 
-from agents.base_agent import BaseAgent
-from agents.tools.flight_tools import (
-    FLY_TO_TOOL,
-    LOITER_OVER_TOOL,
-    create_fly_to_handler,
-    create_loiter_over_handler,
-)
-from agents.tools.sensor_tools import (
-    GET_SENSOR_READING_TOOL,
-    create_get_sensor_reading_handler,
-)
+from agents.tools.flight_tools import FLY_TO_TOOL, create_fly_to_handler
+from agents.tools.sensor_tools import GET_SENSOR_READING_TOOL, create_get_sensor_reading_handler
 from agents.tools.report_tools import (
     REPORT_CLASSIFICATION_TOOL,
-    REQUEST_DETAILED_PASS_TOOL,
+    REQUEST_BACKUP_TOOL,
+    MAINTAIN_SURVEILLANCE_TOOL,
     create_report_classification_handler,
-    create_request_detailed_pass_handler,
+    create_request_backup_handler,
+    create_maintain_surveillance_handler,
 )
+from prompts.registry import load_prompt
 
 logger = structlog.get_logger()
 
-# Verbatim from SPEC.md — do not modify
-AGENT_1_SYSTEM_PROMPT = """You are ARIA Surveillance Agent. You control fixed-wing reconnaissance drones.
-
-You receive: Go signal with approximate coordinates
-You know: Markers represent confirmed or probable incidents.
-          Marker types: fire, structural_collapse, flood, industrial_hazard, maritime_sar
-
-Your mission:
-1. Fly to provided coordinates
-2. When you overfly a marker, you receive sensor data
-3. Classify the incident from sensor data + marker type
-4. Establish loiter pattern over the incident area
-5. Report classification and affected area to orchestrator
-
-Your drones:
-- Speed: 18 m/s cruise, 80m loiter radius
-- Altitude: 120m AGL for survey, 60m for detailed pass
-- You control 1-2 aircraft depending on area size
-
-Rules:
-- Complete one full orbit before reporting classification
-- Always report confidence level with classification
-- Flag if marker area has grown since initial flyover
-- Never descend below 60m AGL
-
-Available tools: fly_to, loiter_over, get_sensor_reading,
-                 report_classification, request_detailed_pass
-"""
-
+SURVEY_RADII = [50.0, 100.0, 150.0]
+ORBIT_POINTS = 8
 
 class SurveillanceAgent(BaseAgent):
     """Agent 1: Surveillance — flies to incident, classifies, reports.
 
-    Inherits BaseAgent OODA-R loop. The LLM decides the survey strategy
-    via tool calls — we do NOT hardcode flight patterns.
-    """
+def _compute_orbit_point(center_lat, center_lon, radius_m, angle_deg):
+    earth_radius = 6_371_000.0
+    lat_r = math.radians(center_lat)
+    lon_r = math.radians(center_lon)
+    bearing_r = math.radians(angle_deg)
+    angular_dist = radius_m / earth_radius
+
+    new_lat_r = math.asin(
+        math.sin(lat_r) * math.cos(angular_dist)
+        + math.cos(lat_r) * math.sin(angular_dist) * math.cos(bearing_r)
+    )
+    new_lon_r = lon_r + math.atan2(
+        math.sin(bearing_r) * math.sin(angular_dist) * math.cos(lat_r),
+        math.cos(angular_dist) - math.sin(lat_r) * math.sin(new_lat_r),
+    )
+    return math.degrees(new_lat_r), math.degrees(new_lon_r)
+
+
+def _haversine(lat1, lon1, lat2, lon2):
+    R = 6_371_000.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(
+        math.radians(lat2)
+    ) * math.sin(dlon / 2) ** 2
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+class SurveillanceAgent:
+    """Agent 1: expanding circle survey → LLM classification → decision (backup or maintain)."""
 
     def __init__(
         self,
@@ -77,78 +68,224 @@ class SurveillanceAgent(BaseAgent):
         drone_id: str,
         stream_callback=None,
     ):
-        # Build tool list (5 tools per SPEC.md)
-        tools = [
-            FLY_TO_TOOL,
-            LOITER_OVER_TOOL,
-            GET_SENSOR_READING_TOOL,
-            REPORT_CLASSIFICATION_TOOL,
-            REQUEST_DETAILED_PASS_TOOL,
-        ]
-
-        # Build tool handlers
-        tool_handlers = {
-            "fly_to": create_fly_to_handler(world_state),
-            "loiter_over": create_loiter_over_handler(world_state),
-            "get_sensor_reading": create_get_sensor_reading_handler(sensor_overlay, world_state),
-            "report_classification": create_report_classification_handler(
-                orchestrator,
-                stream_callback=stream_callback,
-                agent_id=agent_id,
-            ),
-            "request_detailed_pass": create_request_detailed_pass_handler(world_state, drone_id),
-        }
-
-        super().__init__(
-            agent_id=agent_id,
-            system_prompt=AGENT_1_SYSTEM_PROMPT,
-            model=model,
-            world_state=world_state,
-            sensor_overlay=sensor_overlay,
-            drone_ids=[drone_id],
-            tools=tools,
-            tool_handlers=tool_handlers,
-            interval=2.0,
-            stream_callback=stream_callback,
-        )
-
+        self.agent_id = agent_id
+        self.model = model
+        self.world_state = world_state
+        self.sensor_overlay = sensor_overlay
         self.orchestrator = orchestrator
         self.drone_id = drone_id
-        self.target_coords = None
+        self.stream_callback = stream_callback
+        self.client = AsyncAnthropic()
+        self._running = False
+        self._decision = None
 
-    async def observe(self) -> dict:
-        """Extend base observe with mission-specific context."""
-        obs = await super().observe()
-        obs["mission"] = {
-            "target_coordinates": self.target_coords,
-            "drone_id": self.drone_id,
-            "agent_id": self.agent_id,
+        prompt_data = load_prompt("agent1_surveillance")
+        self._system_prompt = prompt_data["text"]
+        self._prompt_version_hash = prompt_data["version_hash"]
+
+        self.tools = [FLY_TO_TOOL, GET_SENSOR_READING_TOOL, REPORT_CLASSIFICATION_TOOL]
+        self._tool_handlers = {
+            "fly_to": create_fly_to_handler(world_state),
+            "get_sensor_reading": create_get_sensor_reading_handler(sensor_overlay, world_state),
+            "report_classification": create_report_classification_handler(orchestrator),
+            "request_backup": create_request_backup_handler(orchestrator),
+            "maintain_surveillance": create_maintain_surveillance_handler(orchestrator),
         }
-        return obs
+
+        self.target_coords = None
+        self.classification_reported = False
+        self.sensor_readings = []
+
+    async def _emit(self, event: str, content) -> None:
+        if self.stream_callback:
+            await self.stream_callback(
+                "agent_stream",
+                {"agent_id": self.agent_id, "event": event, "content": content},
+            )
 
     async def receive_go(self, payload: dict) -> None:
-        """Receive GO signal (coordinates only) and start the OODA-R loop.
+        self.target_coords = payload["coordinates"]
+        self._running = True
+        self.classification_reported = False
+        self.sensor_readings = []
+        logger.info("agent1_go_received", coords=self.target_coords)
+        await self._emit("survey_started", f"Dispatched to ({self.target_coords['lat']:.4f}, {self.target_coords['lon']:.4f})")
+        try:
+            await self._run_survey()
+        except Exception as e:
+            logger.error("agent1_survey_error", error=str(e))
+            await self._emit("error", {"message": str(e)})
 
-        The initial message tells the LLM about the GO signal and target.
-        The LLM then drives the survey via tool calls.
-        """
-        self.target_coords = payload.get("coordinates", {})
-        lat = self.target_coords.get("lat", 0)
-        lon = self.target_coords.get("lon", 0)
+    async def _run_survey(self) -> None:
+        center_lat = self.target_coords["lat"]
+        center_lon = self.target_coords["lon"]
+        cruise_alt = 120.0
 
-        initial_msg = (
-            f"GO signal received. Target coordinates: lat={lat}, lon={lon}. "
-            f"Your drone is {self.drone_id}. "
-            f"Begin surveillance mission: fly to target, survey the area, "
-            f"collect sensor readings, classify the incident, and report."
+        await self._tool_handlers["fly_to"](
+            drone_id=self.drone_id, lat=center_lat, lon=center_lon, alt=cruise_alt
+        )
+        await self._wait_for_arrival(center_lat, center_lon)
+        await self._emit("transit_complete", f"Overhead target ({center_lat:.4f}, {center_lon:.4f}) — beginning survey")
+
+        for radius in SURVEY_RADII:
+            await self._emit("orbit_started", f"Orbit ring at {radius:.0f}m — {ORBIT_POINTS} waypoints")
+            orbit_readings = []
+            for point_idx in range(ORBIT_POINTS):
+                if not self._running:
+                    return
+                angle = (360.0 / ORBIT_POINTS) * point_idx
+                pt_lat, pt_lon = _compute_orbit_point(center_lat, center_lon, radius, angle)
+
+                await self._tool_handlers["fly_to"](
+                    drone_id=self.drone_id, lat=pt_lat, lon=pt_lon, alt=cruise_alt
+                )
+                await self._wait_for_arrival(pt_lat, pt_lon)
+
+                # Emit waypoint progress every other point to reduce noise
+                if point_idx % 2 == 0:
+                    await self._emit("at_waypoint", f"WP {point_idx + 1}/{ORBIT_POINTS}  ({pt_lat:.4f}, {pt_lon:.4f}) — scanning")
+
+                reading = await self._tool_handlers["get_sensor_reading"](drone_id=self.drone_id)
+                orbit_readings.append(reading)
+                if reading.get("status") == "ok":
+                    data = reading.get("data", {})
+                    flags = ", ".join(data.get("hazard_flags", [])) or "none"
+                    hit_summary = (
+                        f"SENSOR HIT — thermal={'YES' if data.get('thermal_detected') else 'NO'}"
+                        f"  survivor_prob={data.get('survivor_probability', 0):.0%}"
+                        f"  wind={data.get('wind_speed', '?')}m/s"
+                        f"  vis={data.get('visibility_m', '?')}m"
+                        f"  flags=[{flags}]"
+                    )
+                    await self._emit("sensor_hit", hit_summary)
+
+            hits = [r for r in orbit_readings if r.get("status") == "ok"]
+            if hits:
+                self.sensor_readings = hits
+                await self._emit("ring_complete", f"{len(hits)}/{ORBIT_POINTS} detections at {radius:.0f}m — classifying incident")
+                await self._classify(center_lat, center_lon, radius, hits)
+                return
+            await self._emit("ring_clear", f"No detections at {radius:.0f}m — expanding search")
+
+        logger.warning("agent1_no_sensor_data", radii_tried=SURVEY_RADII)
+        await self._emit("no_data", f"No sensor data across all rings ({', '.join(str(int(r))+'m' for r in SURVEY_RADII)}) — standing by")
+
+    async def _classify(self, center_lat, center_lon, radius, sensor_hits) -> None:
+        sensor_data = [h.get("data", h) for h in sensor_hits]
+        observations = {
+            "survey_center": {"lat": center_lat, "lon": center_lon},
+            "confirmed_radius_m": radius,
+            "sensor_readings": sensor_data,
+        }
+        messages = [
+            {
+                "role": "user",
+                "content": f"Survey complete. Classify this incident from sensor data:\n{observations}",
+            }
+        ]
+
+        response = await self.client.messages.create(
+            model=self.model,
+            max_tokens=1024,
+            system=self._system_prompt,
+            messages=messages,
+            tools=[REPORT_CLASSIFICATION_TOOL],
+            tool_choice={"type": "tool", "name": "report_classification"},
         )
 
-        logger.info("agent1_go_received", coords=self.target_coords, drone=self.drone_id)
-        await self.run(initial_message=initial_msg)
+        classification_data = None
+        for block in response.content:
+            if block.type == "text" and block.text.strip():
+                await self._emit("reasoning", block.text.strip())
+            elif block.type == "tool_use" and block.name == "report_classification":
+                kwargs_with_hash = {
+                    **block.input,
+                    "prompt_version_hash": self._prompt_version_hash,
+                }
+                await self._tool_handlers["report_classification"](**kwargs_with_hash)
+                classification_data = block.input
+                self.classification_reported = True
+                c = block.input
+                summary = (
+                    f"CLASSIFIED: {c.get('classification', '?').upper()}  "
+                    f"{c.get('confidence', 0):.0%} confidence  "
+                    f"r={c.get('area', {}).get('radius_m', '?')}m"
+                )
+                await self._emit("classified", summary)
+                logger.info("agent1_classified", classification=c.get("classification"))
 
-        # Emit completed event after the OODA-R loop finishes
-        report = self.orchestrator.agent1_report or {}
-        await self._emit("completed", {
-            "classification": report.get("classification", "unknown"),
-            "confidence": report.get("confidence", 0.0),
-        })
+        if classification_data:
+            await self._tool_handlers["fly_to"](
+                drone_id=self.drone_id, lat=center_lat, lon=center_lon, alt=80.0
+            )
+            await self._emit("loitering", f"Loitering at ({center_lat:.4f}, {center_lon:.4f}) alt 80m — assessing situation")
+            await self._decide(classification_data)
+
+    async def _decide(self, classification_data: dict) -> None:
+        """Second LLM call: decide whether to request specialist backup or maintain surveillance."""
+        c = classification_data
+        sensor_sum = c.get("sensor_summary", {})
+        messages = [
+            {
+                "role": "user",
+                "content": (
+                    f"Classification: {c.get('classification')} "
+                    f"(confidence {c.get('confidence', 0):.0%})\n"
+                    f"Notes: {c.get('notes', 'none')}\n"
+                    f"Sensor summary: thermal={sensor_sum.get('thermal_detected')}, "
+                    f"survivor_probability={sensor_sum.get('survivor_probability', 0):.0%}, "
+                    f"hazards={sensor_sum.get('hazard_flags', [])}, "
+                    f"wind={sensor_sum.get('wind_speed', '?')}m/s, "
+                    f"visibility={sensor_sum.get('visibility_m', '?')}m\n\n"
+                    "Based on your assessment, decide: request specialist backup or maintain surveillance?"
+                ),
+            }
+        ]
+
+        response = await self.client.messages.create(
+            model=self.model,
+            max_tokens=512,
+            system=self._system_prompt,
+            messages=messages,
+            tools=[REQUEST_BACKUP_TOOL, MAINTAIN_SURVEILLANCE_TOOL],
+            tool_choice={"type": "any"},
+        )
+
+        for block in response.content:
+            if block.type == "text" and block.text.strip():
+                await self._emit("reasoning", block.text.strip())
+            elif block.type == "tool_use":
+                inp = block.input
+                if block.name == "request_backup":
+                    summary = (
+                        f"REQUEST BACKUP — {inp.get('swarm_type', '?').replace('_', ' ').upper()} swarm"
+                        f" — {inp.get('urgency', '?')} urgency"
+                        f" — est. {inp.get('estimated_casualties', 0)} casualties"
+                    )
+                    await self._emit("decision", summary)
+                    await self._emit("rationale", inp.get("rationale", ""))
+                    result = await self._tool_handlers["request_backup"](**inp)
+                    logger.info("agent1_requested_backup", swarm_type=inp.get("swarm_type"), urgency=inp.get("urgency"))
+                elif block.name == "maintain_surveillance":
+                    summary = (
+                        f"MAINTAIN SURVEILLANCE"
+                        f" — reassess in {inp.get('reassess_in_seconds', '?')}s"
+                        f" — {inp.get('reason', '')}"
+                    )
+                    await self._emit("decision", summary)
+                    result = await self._tool_handlers["maintain_surveillance"](**inp)
+                    logger.info("agent1_maintain_surveillance", reason=inp.get("reason"))
+
+    async def _wait_for_arrival(self, target_lat, target_lon, threshold_m=20.0) -> None:
+        while self._running:
+            telemetry = self.world_state.get_drone_telemetry(self.drone_id)
+            if telemetry is None:
+                await asyncio.sleep(0.5)
+                continue
+            dist = _haversine(telemetry.lat, telemetry.lon, target_lat, target_lon)
+            if dist < threshold_m:
+                return
+            await asyncio.sleep(0.2)
+
+    def stop(self) -> None:
+        self._running = False

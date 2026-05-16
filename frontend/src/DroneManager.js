@@ -1,52 +1,78 @@
-import mapboxgl from 'mapbox-gl'
-import { DRONE_STATES, DISASTER_COLOR_MAP } from './constants.js'
+import L from 'leaflet'
+import { DRONE_STATES } from './constants.js'
 
 const LERP_MS = 500
-const TRAIL_MAX = 20
 
-function lerp(a, b, t) {
-  return a + (b - a) * t
+// ── Drone type config ────────────────────────────────────────────────────────
+
+const DRONE_VISUAL = {
+  fixed_wing:   { color: '#00CFFF', size: 22, anchor: [11, 11] },
+  rotary:       { color: '#00FF88', size: 16, anchor: [8, 8] },
+  micro_rotary: { color: '#FFB800', size: 12, anchor: [6, 6] },
 }
+
+// ── SVG shapes ───────────────────────────────────────────────────────────────
+
+// Fixed-wing: solid filled arrow pointing up — large, dominant
+function fixedWingSVG(color) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 38 38" width="22" height="22">
+    <g style="filter:drop-shadow(0 0 4px ${color})">
+      <polygon points="19,2 36,34 19,27 2,34" fill="${color}" opacity="0.9"/>
+      <polygon points="19,2 36,34 19,27 2,34" fill="none" stroke="white" stroke-width="1" opacity="0.6"/>
+      <line x1="19" y1="27" x2="19" y2="2" stroke="white" stroke-width="0.8" opacity="0.4"/>
+    </g>
+  </svg>`
+}
+
+// Rotary: diamond body + 4 radiating arms — medium, cross-shaped
+function rotarySVG(color) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="16" height="16">
+    <g style="filter:drop-shadow(0 0 3px ${color})">
+      <line x1="14" y1="14" x2="4" y2="4" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="14" y1="14" x2="24" y2="4" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="14" y1="14" x2="4" y2="24" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="14" y1="14" x2="24" y2="24" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+      <polygon points="14,4 20,14 14,24 8,14" fill="${color}" opacity="0.85"/>
+      <polygon points="14,4 20,14 14,24 8,14" fill="none" stroke="white" stroke-width="0.8"/>
+    </g>
+  </svg>`
+}
+
+// Micro-rotary: circle with crosshairs — small, precision symbol
+function microRotarySVG(color) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="12" height="12">
+    <g style="filter:drop-shadow(0 0 2px ${color})">
+      <circle cx="10" cy="10" r="7" fill="${color}" opacity="0.2" stroke="${color}" stroke-width="1.5"/>
+      <circle cx="10" cy="10" r="2.5" fill="${color}"/>
+      <line x1="10" y1="1" x2="10" y2="7" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="10" y1="13" x2="10" y2="19" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="1" y1="10" x2="7" y2="10" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="13" y1="10" x2="19" y2="10" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>
+    </g>
+  </svg>`
+}
+
+function buildSVG(droneType, color) {
+  if (droneType === 'fixed_wing') return fixedWingSVG(color)
+  if (droneType === 'micro_rotary') return microRotarySVG(color)
+  return rotarySVG(color)
+}
+
+function lerp(a, b, t) { return a + (b - a) * t }
 
 function bearingDeg(fromLat, fromLon, toLat, toLon) {
   const dLon = toLon - fromLon
   const dLat = toLat - fromLat
-  const rad = Math.atan2(dLon, dLat)
-  return (rad * 180) / Math.PI
+  return (Math.atan2(dLon, dLat) * 180) / Math.PI
 }
 
-function droneGlowSVG(color) {
-  return `
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="28" height="28">
-    <style>
-      .arm { stroke: white; stroke-width: 1.5; stroke-linecap: round; }
-      .rotor { fill: none; stroke: white; stroke-width: 1; }
-      .body { fill: white; }
-      .glow { filter: drop-shadow(0 0 4px ${color}); }
-    </style>
-    <g class="glow">
-      <!-- Arms -->
-      <line class="arm" x1="14" y1="14" x2="5"  y2="5" />
-      <line class="arm" x1="14" y1="14" x2="23" y2="5" />
-      <line class="arm" x1="14" y1="14" x2="5"  y2="23"/>
-      <line class="arm" x1="14" y1="14" x2="23" y2="23"/>
-      <!-- Rotors -->
-      <circle class="rotor" cx="5"  cy="5"  r="3.5"/>
-      <circle class="rotor" cx="23" cy="5"  r="3.5"/>
-      <circle class="rotor" cx="5"  cy="23" r="3.5"/>
-      <circle class="rotor" cx="23" cy="23" r="3.5"/>
-      <!-- Body -->
-      <circle class="body" cx="14" cy="14" r="3"/>
-    </g>
-  </svg>`
-}
+// ── DroneManager ─────────────────────────────────────────────────────────────
 
 class _DroneManager {
   constructor() {
     this._map = null
     this._drones = {}
     this._rafId = null
-    this._lastTime = 0
   }
 
   init(mapInstance) {
@@ -62,83 +88,49 @@ class _DroneManager {
 
   updateDrone(data) {
     if (!this._map) return
-    const { drone_id, lat, lon, heading, state, battery_pct, alt, speed, disaster_type } = data
-    const color = disaster_type ? (DISASTER_COLOR_MAP[disaster_type] || '#00FF88') : '#00FF88'
+    const { drone_id, lat, lon, heading, state, battery_pct, alt, speed, drone_type = 'rotary' } = data
+    const visual = DRONE_VISUAL[drone_type] || DRONE_VISUAL.rotary
+    const { color, size, anchor } = visual
 
     if (!this._drones[drone_id]) {
-      // Create marker
-      const el = document.createElement('div')
-      el.className = 'drone-marker'
-      el.innerHTML = droneGlowSVG(color)
+      const svg = buildSVG(drone_type, color)
+      const typeLabel = drone_type.replace(/_/g, '-')
+      const html = `<div class="drone-marker">
+        <div class="drone-svg">${svg}</div>
+        <div class="drone-state-badge" style="background:${DRONE_STATES[state] || DRONE_STATES.IDLE}"></div>
+      </div>`
+      const icon = L.divIcon({ className: '', html, iconSize: [size, size], iconAnchor: anchor })
+      const marker = L.marker([lat, lon], { icon, interactive: true }).addTo(this._map)
 
-      const badge = document.createElement('div')
-      badge.className = 'drone-state-badge'
-      badge.style.background = DRONE_STATES[state] || DRONE_STATES.IDLE
-      el.appendChild(badge)
+      const initialState = state || 'IDLE'
+      if (initialState === 'IDLE') marker.setOpacity(0)
 
-      const svgEl = el.querySelector('svg')
-
-      el.addEventListener('click', (e) => {
-        e.stopPropagation()
+      marker.bindPopup(() => {
         const d = this._drones[drone_id]
-        if (!d || !this._map) return
-        new mapboxgl.Popup({ closeButton: true, maxWidth: '220px' })
-          .setLngLat([d.currentLon, d.currentLat])
-          .setHTML(`
-            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8">
-              <div><span style="color:#7A8FA8">ID   </span> ${drone_id}</div>
-              <div><span style="color:#7A8FA8">STATE</span> ${d.state}</div>
-              <div><span style="color:#7A8FA8">BAT  </span> ${d.battery_pct != null ? d.battery_pct.toFixed(0) + '%' : '?'}</div>
-              <div><span style="color:#7A8FA8">ALT  </span> ${d.alt != null ? d.alt.toFixed(0) + 'm' : '?'}</div>
-              <div><span style="color:#7A8FA8">SPD  </span> ${d.speed != null ? d.speed.toFixed(1) + ' m/s' : '?'}</div>
-            </div>
-          `)
-          .addTo(this._map)
-      })
-
-      const marker = new mapboxgl.Marker({ element: el })
-        .setLngLat([lon, lat])
-        .addTo(this._map)
-
-      // Create trail source
-      const trailId = `drone-trail-${drone_id}`
-      if (!this._map.getSource(trailId)) {
-        this._map.addSource(trailId, {
-          type: 'geojson',
-          data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] }, properties: {} },
-        })
-        this._map.addLayer({
-          id: trailId,
-          type: 'line',
-          source: trailId,
-          paint: {
-            'line-color': color,
-            'line-width': 1.5,
-            'line-opacity': 0.4,
-            'line-dasharray': [3, 3],
-          },
-        })
-      }
+        if (!d) return ''
+        return `<div style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8">
+          <div><span style="color:#7A8FA8">ID   </span> ${drone_id}</div>
+          <div><span style="color:#7A8FA8">TYPE </span> <span style="color:${color}">${typeLabel}</span></div>
+          <div><span style="color:#7A8FA8">STATE</span> ${d.state}</div>
+          <div><span style="color:#7A8FA8">BAT  </span> ${d.battery_pct != null ? d.battery_pct.toFixed(0) + '%' : '?'}</div>
+          <div><span style="color:#7A8FA8">ALT  </span> ${d.alt != null ? d.alt.toFixed(0) + 'm' : '?'}</div>
+          <div><span style="color:#7A8FA8">SPD  </span> ${d.speed != null ? d.speed.toFixed(1) + ' m/s' : '?'}</div>
+        </div>`
+      }, { className: 'aria-popup' })
 
       this._drones[drone_id] = {
         marker,
-        svgEl,
-        badge,
         startLat: lat, startLon: lon,
         targetLat: lat, targetLon: lon,
         currentLat: lat, currentLon: lon,
         animStart: performance.now(),
         bearing: heading || 0,
-        trail: [[lon, lat]],
-        state: state || 'IDLE',
-        battery_pct,
-        alt,
-        speed,
-        color,
+        state: initialState,
+        battery_pct, alt, speed, color, drone_type,
       }
     } else {
-      // Update existing
       const d = this._drones[drone_id]
+      const prevState = d.state
       d.startLat = d.currentLat
       d.startLon = d.currentLon
       d.targetLat = lat
@@ -149,48 +141,39 @@ class _DroneManager {
       d.alt = alt ?? d.alt
       d.speed = speed ?? d.speed
 
-      // Update badge color
-      d.badge.style.background = DRONE_STATES[d.state] || DRONE_STATES.IDLE
+      if (prevState === 'IDLE' && d.state !== 'IDLE') d.marker.setOpacity(1)
+      if (d.state === 'IDLE') d.marker.setOpacity(0)
+
+      const el = d.marker.getElement()
+      if (el) {
+        const badge = el.querySelector('.drone-state-badge')
+        if (badge) badge.style.background = DRONE_STATES[d.state] || DRONE_STATES.IDLE
+      }
     }
   }
 
   _tick(timestamp) {
     if (!this._map) return
 
-    Object.entries(this._drones).forEach(([drone_id, d]) => {
+    Object.entries(this._drones).forEach(([, d]) => {
       const elapsed = timestamp - d.animStart
       const t = Math.min(elapsed / LERP_MS, 1)
 
       const newLat = lerp(d.startLat, d.targetLat, t)
       const newLon = lerp(d.startLon, d.targetLon, t)
-
       d.currentLat = newLat
       d.currentLon = newLon
-      d.marker.setLngLat([newLon, newLat])
+      d.marker.setLatLng([newLat, newLon])
 
-      // Heading
       const dLat = d.targetLat - d.startLat
       const dLon = d.targetLon - d.startLon
       if (Math.abs(dLat) > 1e-7 || Math.abs(dLon) > 1e-7) {
         d.bearing = bearingDeg(d.startLat, d.startLon, d.targetLat, d.targetLon)
       }
-      if (d.svgEl) {
-        d.svgEl.style.transform = `rotate(${d.bearing}deg)`
-      }
-
-      // Trail — update every completed lerp step
-      if (t >= 1) {
-        d.trail.push([newLon, newLat])
-        if (d.trail.length > TRAIL_MAX) d.trail.shift()
-        const trailId = `drone-trail-${drone_id}`
-        const src = this._map.getSource(trailId)
-        if (src && d.trail.length >= 2) {
-          src.setData({
-            type: 'Feature',
-            geometry: { type: 'LineString', coordinates: d.trail },
-            properties: {},
-          })
-        }
+      const el = d.marker.getElement()
+      if (el) {
+        const svg = el.querySelector('.drone-svg')
+        if (svg) svg.style.transform = `rotate(${d.bearing}deg)`
       }
     })
 
