@@ -57,6 +57,19 @@ class AdvisoryAgent:
                     advisory["last_updated"] = datetime.now(timezone.utc).isoformat()
                     self.latest_advisory = advisory
                     logger.info("advisory_issued", incident_id=briefing_dict.get("incident_id"))
+                    try:
+                        from comms.twilio_client import send_advisory_broadcast
+                        immediate_actions = advisory.get("immediate_actions", [])
+                        immediate = immediate_actions[0] if immediate_actions else "Evacuate the affected area immediately."
+                        send_advisory_broadcast(
+                            disaster_type=briefing_dict.get("disaster_type", briefing_dict.get("classification", "unknown")),
+                            severity=briefing_dict.get("severity", "high"),
+                            location_name="Kondapur, Hyderabad",
+                            immediate_action=immediate,
+                            incident_id=briefing_dict.get("incident_id", "UNKNOWN"),
+                        )
+                    except Exception as _adv_err:
+                        logger.warning("advisory_broadcast_failed", error=str(_adv_err))
                     return advisory
 
         except Exception as e:

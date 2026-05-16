@@ -4,8 +4,10 @@ Flies expanding circle survey pattern to locate and classify incidents.
 Does NOT receive disaster_type — classifies from sensor data alone.
 After classification, makes an explicit decision: request backup or maintain surveillance.
 """
-
+import asyncio
+import math
 import structlog
+from anthropic import AsyncAnthropic
 
 from agents.tools.flight_tools import FLY_TO_TOOL, create_fly_to_handler
 from agents.tools.sensor_tools import GET_SENSOR_READING_TOOL, create_get_sensor_reading_handler
@@ -23,9 +25,6 @@ logger = structlog.get_logger()
 
 SURVEY_RADII = [180.0, 300.0]  # visible on map; sensors trigger at first ring
 ORBIT_POINTS = 8               # clean circle, 45° between points
-
-class SurveillanceAgent(BaseAgent):
-    """Agent 1: Surveillance — flies to incident, classifies, reports.
 
 def _compute_orbit_point(center_lat, center_lon, radius_m, angle_deg):
     earth_radius = 6_371_000.0
@@ -56,7 +55,7 @@ def _haversine(lat1, lon1, lat2, lon2):
 
 
 class SurveillanceAgent:
-    """Agent 1: expanding circle survey → LLM classification → decision (backup or maintain)."""
+    """Agent 1: expanding circle survey -> LLM classification -> decision (backup or maintain)."""
 
     def __init__(
         self,
@@ -215,7 +214,7 @@ class SurveillanceAgent:
                 conf = block.input.get('confidence', 0)
                 confirmed = block.input.get('confirmed_hint', True)
                 hint_note = '✓ confirmed hint' if confirmed else f'✗ revised from hint'
-                logger.info("agent1_classified", result=result)
+                logger.info("agent1_classified", result=block.input)
                 await self._emit("classified", f"CLASSIFIED: {cls.upper()} — conf={conf:.0%} — {hint_note}")
 
                 await self._tool_handlers["fly_to"](

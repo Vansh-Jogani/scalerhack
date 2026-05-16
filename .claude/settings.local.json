@@ -19,7 +19,8 @@
       "Bash(cp /c/Users/L125775/githubtset/a22/scalerhack/frontend/src/main.jsx /c/Users/L125775/githubtset/ascent/frontend/src/main.jsx)",
       "Bash(cp /c/Users/L125775/githubtset/a22/scalerhack/frontend/src/Map.jsx /c/Users/L125775/githubtset/ascent/frontend/src/Map.jsx)",
       "Bash(cp /c/Users/L125775/githubtset/a22/scalerhack/frontend/src/DroneManager.js /c/Users/L125775/githubtset/ascent/frontend/src/DroneManager.js)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(nslookup api.omium.ai)"
     ]
   }
 }

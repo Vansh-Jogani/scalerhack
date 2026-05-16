@@ -116,6 +116,7 @@ async def broadcast_loop():
             survivors = world_state.get_survivor_markers()
 
             bases = world_state.get_bases()
+            markers = [m.model_dump() for m in world_state.get_markers()]
             for ws in list(connected_clients):
                 try:
                     for t in telemetry:
@@ -141,89 +142,6 @@ async def world_event_task(delay: int = 30):
         logger.info("world_event_fired", **event)
         await orchestrator.trigger_world_event(event)
 
-    Per SPEC.md AGENT_3_CONFIG trigger: 60s_heartbeat_check
-    """
-    from agents.agent3_advisory import AdvisoryAgent
-
-    while True:
-        await asyncio.sleep(60)
-        if orchestrator and orchestrator.agent1_report:
-            logger.info("heartbeat_trigger", trigger="60s_heartbeat_check")
-            agent3 = AdvisoryAgent(
-                agent_id="agent-3",
-                model=config["models"]["agent3"],
-                orchestrator=orchestrator,
-                stream_callback=broadcast_event,
-            )
-            try:
-                advisory = await agent3.on_trigger(
-                    trigger_type="60s_heartbeat_check",
-                    agent1_report=orchestrator.agent1_report,
-                    agent2_report=orchestrator.agent2_report or {},
-                )
-                await broadcast_event("advisory", advisory)
-            except Exception as e:
-                logger.error("heartbeat_error", error=str(e))
-
-
-async def world_event_task(delay: int = 90):
-    """Schedule world event after GO signal.
-
-    Per SPEC.md: For fire scenario, after 90 seconds fire grows by 20% radius,
-    wind shifts 15°.
-    """
-    if world_state and world_state.markers:
-        marker = world_state.markers[0]
-        await world_state.schedule_event(
-            event_type="fire_growth",
-            delay_seconds=delay,
-            marker_id=marker.id,
-            orchestrator=orchestrator,
-        )
-
-
-# ---------------------------------------------------------------------------
-# Lifespan
-# ---------------------------------------------------------------------------
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global world_state, sensor_overlay, orchestrator, heartbeat_task, alert_detector
-
-    scenario_path = Path(config["simulation"]["scenario"])
-    world_state = WorldState(scenario_path)
-    sensor_overlay = SensorOverlay()
-    orchestrator = ARIAOrchestrator(
-        world_state,
-        sensor_overlay,
-        model=config["models"]["agent1"],
-        agent3_model=config["models"]["agent3"],
-    )
-    orchestrator.set_event_callback(broadcast_event)
-
-    # Spawn initial surveillance drone
-    world_state.add_drone(
-        "drone-001", "fixed_wing",
-        world_state.home_position["lat"],
-        world_state.home_position["lon"],
-    )
-
-    # Alert detector — autonomous signal fusion
-    alert_detector = AlertDetector(config=config, orchestrator=orchestrator)
-    set_detector(alert_detector)
-    detector_task = asyncio.create_task(alert_detector.start())
-
-    tick_rate = config["simulation"]["tick_rate_hz"]
-    tick_task = asyncio.create_task(tick_loop(tick_rate))
-    bcast_task = asyncio.create_task(broadcast_loop())
-    heartbeat_task = asyncio.create_task(heartbeat_loop())
-
-    logger.info("system_started", scenario=str(scenario_path), tick_rate=tick_rate)
-    yield
-    tick_task.cancel()
-    bcast_task.cancel()
-    heartbeat_task.cancel()
-    detector_task.cancel()
 
 
 # ---------------------------------------------------------------------------
@@ -254,6 +172,7 @@ class IncidentPayload(BaseModel):
 
 @app.post("/api/incident/create")
 async def create_incident(payload: IncidentPayload):
+    from comms.twilio_client import call_incident_commander
     disaster_type = payload.type or payload.disaster_type
     if payload.area and "center" in payload.area:
         area = payload.area
@@ -265,6 +184,14 @@ async def create_incident(payload: IncidentPayload):
             "radius_m": payload.zone_radius_m or 600.0,
         }
     go_payload = {"area": area, "disaster_type": disaster_type, "severity": payload.severity}
+
+    if payload.severity in ("high", "critical"):
+        incident_id_preview = f"INC-{int(area['center']['lat'] * 1e4)}{int(area['center']['lon'] * 1e4)}"
+        asyncio.create_task(asyncio.to_thread(
+            call_incident_commander,
+            disaster_type, "Kondapur, Hyderabad", payload.severity, incident_id_preview
+        ))
+
     agent1_payload = await orchestrator.receive_go_signal(go_payload)
     asyncio.create_task(world_event_task(delay=30))
     return {

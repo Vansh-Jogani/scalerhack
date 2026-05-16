@@ -1,8 +1,20 @@
-"""Mock Omium tracer. Structural match to real SDK — swap this file in V2."""
+"""Omium tracer — live SDK with mock fallback if key absent."""
 
+import os
 import structlog
 
 logger = structlog.get_logger()
+
+try:
+    import omium
+    omium.init(
+        api_key=os.getenv("OMIUM_API_KEY"),
+        project="aria-v1",
+        api_base_url="https://app.omium.ai",
+    )
+    logger.info("omium_live", project="aria-v1")
+except Exception as _omium_err:
+    logger.warning("omium_init_failed", error=str(_omium_err))
 
 
 class Span:

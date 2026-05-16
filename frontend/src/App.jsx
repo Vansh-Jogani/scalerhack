@@ -13,8 +13,9 @@ function useReconnectingWS(path, onMessage) {
     let ws, stopped = false
     function connect() {
       ws = new WebSocket(`ws://${window.location.host}${path}`)
+      wsRef.current = ws
       ws.onmessage = (e) => { try { cbRef.current(JSON.parse(e.data)) } catch {} }
-      ws.onclose = () => { if (!stopped) setTimeout(connect, 2000) }
+      ws.onclose = () => { wsRef.current = null; if (!stopped) setTimeout(connect, 2000) }
     }
     connect()
     return () => { stopped = true; wsRef.current?.close() }

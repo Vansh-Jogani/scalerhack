@@ -272,6 +272,19 @@ def _load_response_centres() -> list[dict]:
         hits = [r for r in all_readings if r.get("status") == "ok"]
         thermal_count = sum(1 for r in hits if r.get("data", {}).get("thermal_detected"))
         surv_detections = [r for r in hits if r.get("data", {}).get("survivor_probability", 0) > 0.4]
+
+        if len(surv_detections) > 0:
+            try:
+                from comms.twilio_client import send_survivor_alert
+                send_survivor_alert(
+                    lat=center_lat,
+                    lon=center_lon,
+                    count=len(surv_detections),
+                    incident_id=self.incident_id or "UNKNOWN",
+                )
+            except Exception as _sms_err:
+                logger.warning("survivor_sms_failed", error=str(_sms_err))
+
         await self._emit("survey_complete", f"Grid complete — {len(hits)} sensor hits · {thermal_count} thermal signatures · {len(surv_detections)} possible survivor contacts")
         await self._emit("llm_call", f"Calling claude-haiku-4-5 with tool_choice=report_findings · correlating {len(hits)} readings across {num_drones} drones")
         await self._report_via_llm(agent1_report, all_readings)

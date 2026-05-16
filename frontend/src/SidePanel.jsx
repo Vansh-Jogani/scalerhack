@@ -170,6 +170,83 @@ function AgentCard({ agentStates, accent }) {
   )
 }
 
+// ── Stream narration ──────────────────────────────────────────────────────────
+function getNarration(event, content, agent) {
+  let parsed = {}
+  try { parsed = JSON.parse(content) } catch {}
+
+  const fmt = (s) => s ? String(s).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : ''
+
+  switch (event) {
+    case 'pipeline_start':
+      return 'Mission activated — Agent 1 is being dispatched to the incident zone.'
+
+    case 'dispatched': {
+      const c = parsed.target || parsed.coords || parsed
+      if (c && (c.lat != null || c.lon != null))
+        return `Fixed-wing surveillance drone is airborne and heading to (${Number(c.lat).toFixed(4)}°N, ${Number(c.lon).toFixed(4)}°E).`
+      return 'Fixed-wing surveillance drone is airborne and heading to the incident zone.'
+    }
+
+    case 'survey_started': {
+      const hint = parsed.type_hint || ''
+      return `Agent 1 has arrived on station and is beginning reconnaissance. Incident type hint: ${hint ? fmt(hint) : 'Unknown'}.`
+    }
+
+    case 'nav': {
+      const m = content.match(/fly_to\(\s*([\d.-]+)\s*,\s*([\d.-]+)(?:[^)]*?alt=([^),]+))?/)
+      if (m) return `Navigating to ${parseFloat(m[1]).toFixed(4)}°N ${parseFloat(m[2]).toFixed(4)}°E at ${m[3] ? m[3].trim() : 'specified'} altitude.`
+      return 'Agent 1 is navigating to the next waypoint.'
+    }
+
+    case 'error':
+      return 'Agent 1 encountered an error and has paused. The mission is being held.'
+
+    case 'classified': {
+      const type = fmt(parsed.incident_type || parsed.type || '')
+      const conf = parsed.confidence != null ? Math.round(parsed.confidence) : '—'
+      const count = parsed.drone_count ?? parsed.drones_recommended ?? '—'
+      return `Agent 1 has classified the incident as ${type || 'Unknown'} with ${conf}% confidence. Recommending ${count} response drones.`
+    }
+
+    case 'swarm_deployed': {
+      const count = parsed.count ?? parsed.drone_count ?? '—'
+      return `Agent 2 has deployed a ${fmt(parsed.swarm_type || parsed.type || 'specialist')} swarm of ${count} drones to the incident zone.`
+    }
+
+    case 'findings_reported': {
+      const zones = parsed.zones_assessed ?? '—'
+      const surv = parsed.survivor_count ?? '—'
+      const cov = parsed.coverage_pct != null ? Math.round(parsed.coverage_pct) : '—'
+      return `Agent 2 survey complete. ${zones} zones assessed, ${surv} survivor signatures detected. Zone coverage: ${cov}%.`
+    }
+
+    case 'advisory_issued':
+    case 'advisory_updated':
+      return 'Agent 3 has issued a response advisory. Review the Advisory panel for full recommendations.'
+
+    case 'world_event': {
+      const t = parsed.type || ''
+      if (t === 'fire_growth') return `The fire has grown. Affected zone is now ${parsed.new_radius_m ? `${parsed.new_radius_m}m` : 'larger'} radius. Agents are reassessing.`
+      if (t === 'structural_collapse') return 'Secondary structural event detected. Agents are updating their survey.'
+      if (t === 'flood_expansion') return 'Flood extent has expanded. Agent 2 is extending patrol coverage.'
+      return 'Environmental conditions have changed. Agents are adapting their response.'
+    }
+
+    case 'tool_call':
+      return `Agent ${agent} is using the ${fmt(parsed.tool_name || parsed.name || 'tool')}.`
+
+    case 'tool_result':
+      return `Tool completed. Agent ${agent} is processing the result.`
+
+    case 'reasoning':
+      return `Agent ${agent} is analysing the situation.`
+
+    default:
+      return `Agent ${agent}: ${event || 'event'} — system is processing.`
+  }
+}
+
 // ── Stream feed (active) ──────────────────────────────────────────────────────
 function StreamCard({ feedEntries, accent, advisory }) {
   const c = accent.hex
@@ -205,13 +282,20 @@ function StreamCard({ feedEntries, accent, advisory }) {
           )}
           {feedEntries.map((e) => {
             const fc = agentColors[e.agent] || '#7A8FA8'
+            const narration = getNarration(e.event, e.content, e.agent)
+            const isError = e.event === 'error'
+            const isSys = e.agent === 'SYS'
+            const narrationColor = isError ? '#FF3B3B' : isSys ? '#7A8FA8' : '#E8EDF5'
             return (
-              <div key={e.id} style={{ display: 'flex', gap: 8, padding: '6px 18px', borderBottom: '1px solid rgba(255,255,255,0.03)', alignItems: 'flex-start', animation: 'ticker 0.2s ease-out' }}>
-                <Mn color="rgba(232,237,245,0.28)" size={10} weight={500}>{e.ts}</Mn>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, color: fc, letterSpacing: '0.06em', minWidth: 22, flexShrink: 0 }}>{e.agent}</span>
+              <div key={e.id} style={{ display: 'flex', gap: 8, padding: '7px 18px', borderBottom: '1px solid rgba(255,255,255,0.03)', alignItems: 'flex-start', animation: 'ticker 0.2s ease-out' }}>
+                <Mn color="rgba(232,237,245,0.28)" size={10} weight={500} style={{ paddingTop: 2, flexShrink: 0 }}>{e.ts}</Mn>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, color: fc, letterSpacing: '0.06em', minWidth: 22, flexShrink: 0, paddingTop: 2 }}>{e.agent}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  {e.event && <div style={{ fontSize: 9, color: 'rgba(232,237,245,0.38)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', fontWeight: 600, marginBottom: 1 }}>{e.event}</div>}
-                  <div style={{ fontSize: 12, color: 'rgba(232,237,245,0.8)', lineHeight: 1.45, fontFamily: 'var(--font-mono)', wordBreak: 'break-word' }}>{e.content}</div>
+                  <div style={{ fontSize: 13, color: narrationColor, lineHeight: 1.45, fontFamily: 'DM Sans, system-ui, sans-serif', fontWeight: 400, marginBottom: 4, wordBreak: 'break-word' }}>{narration}</div>
+                  <div style={{ fontSize: 10, color: '#525866', fontFamily: 'var(--font-mono)', wordBreak: 'break-word', lineHeight: 1.4 }}>
+                    {e.event && <span style={{ textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginRight: 6 }}>{e.event}</span>}
+                    {e.event !== 'reasoning' && e.content}
+                  </div>
                 </div>
               </div>
             )
