@@ -12,7 +12,6 @@ class Telemetry:
     speed: float
     state: str
     battery_pct: float
-    drone_type: str = "fixed_wing"
     drone_type: str = field(default="unknown")
 
 
