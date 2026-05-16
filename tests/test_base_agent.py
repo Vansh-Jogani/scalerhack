@@ -13,13 +13,16 @@ from sim.world_state import WorldState
 # ---------------------------------------------------------------------------
 
 def make_agent(world_state) -> BaseAgent:
+    from sim.sensor_overlay import SensorOverlay
     return BaseAgent(
         agent_id="test-agent",
         system_prompt="You are a test agent.",
         model="claude-sonnet-4-20250514",
         world_state=world_state,
+        sensor_overlay=SensorOverlay(),
         drone_ids=["d1"],
         tools=[],
+        tool_handlers={},
         interval=0.01,
     )
 
@@ -63,7 +66,8 @@ async def test_observe_telemetry_is_none_for_missing_drone():
     # Agent references drone "d1" but it doesn't exist yet
     agent = make_agent(ws)
     obs = await agent.observe()
-    assert obs["drone_telemetry"] == [None]
+    # BaseAgent.observe() skips drones with no telemetry — list is empty
+    assert obs["drone_telemetry"] == []
 
 
 # ---------------------------------------------------------------------------
@@ -107,7 +111,9 @@ async def test_act_skips_unknown_tool():
     ]
 
     results = await agent.act(response)
-    assert results == []
+    # Unknown tools return an error result, not an empty list
+    assert len(results) == 1
+    assert results[0]["result"]["status"] == "error"
 
 
 @pytest.mark.asyncio

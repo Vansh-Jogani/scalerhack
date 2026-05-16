@@ -56,21 +56,6 @@ function arrowSVG(colour) {
   </svg>`
 }
 
-function rotaryDroneSVG(disasterColour, stateColour) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
-    <line x1="14" y1="14" x2="20" y2="8"  stroke="white" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="14" y1="14" x2="8"  y2="8"  stroke="white" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="14" y1="14" x2="20" y2="20" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="14" y1="14" x2="8"  y2="20" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
-    <circle cx="20" cy="8"  r="4" fill="${disasterColour}" stroke="white" stroke-width="0.5"/>
-    <circle cx="8"  cy="8"  r="4" fill="${disasterColour}" stroke="white" stroke-width="0.5"/>
-    <circle cx="20" cy="20" r="4" fill="${disasterColour}" stroke="white" stroke-width="0.5"/>
-    <circle cx="8"  cy="20" r="4" fill="${disasterColour}" stroke="white" stroke-width="0.5"/>
-    <circle cx="14" cy="14" r="4" fill="white"/>
-    <circle cx="14" cy="14" r="2.5" fill="${stateColour}"/>
-  </svg>`
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const ease = (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
@@ -107,12 +92,9 @@ class DispatchAnimation {
     this._arrowEl     = null
     this._arrowMarker = null
 
-    // Patrol drones
-    this._droneEls       = []
-    this._droneMarkers   = []
-    this._droneAngles    = []
-    this._droneTrailPts  = []
+    // Patrol drones — positions now driven by backend telemetry via DroneDotLayer
     this._patrolCenters  = []
+    this._droneAngles    = []
 
     // Assessment panel
     this._assessPanel = null
@@ -144,9 +126,6 @@ class DispatchAnimation {
 
     if (this._fwMarker)    { this._fwMarker.remove();    this._fwMarker    = null }
     if (this._arrowMarker) { this._arrowMarker.remove(); this._arrowMarker = null }
-    for (const m of this._droneMarkers) m.remove()
-    this._droneMarkers = []
-    this._droneEls     = []
 
     if (this._assessPanel?.parentNode) {
       this._assessPanel.parentNode.removeChild(this._assessPanel)
@@ -414,7 +393,7 @@ class DispatchAnimation {
     this._rafId = requestAnimationFrame(tick)
   }
 
-  // ── Phase 5: Burst — arrow gone, rings expand, drones spawn ──────────────
+  // ── Phase 5: Burst — arrow gone, rings expand ────────────────────────────
 
   _phase5_burst() {
     if (this._arrowMarker) { this._arrowMarker.remove(); this._arrowMarker = null }
@@ -466,7 +445,7 @@ class DispatchAnimation {
     }
     requestAnimationFrame(animateBurst)
 
-    // Compute patrol centres + spawn drones
+    // Compute patrol centres (used for reference only — drones appear via telemetry)
     for (let i = 0; i < this._N; i++) {
       const angle = (i / this._N) * 2 * Math.PI + (Math.random() - 0.5) * 0.4
       this._patrolCenters.push({
@@ -474,61 +453,16 @@ class DispatchAnimation {
         lat: this._dst.lat + Math.sin(angle) * 0.0006,
       })
       this._droneAngles.push(angle)
-      this._droneTrailPts.push([])
-
-      // Per-drone trail layer
-      const trailSrc = `dispatch-drone-trail-${i}-source`
-      const trailLay = `dispatch-drone-trail-${i}`
-      this._addSource(trailSrc, emptyLineString())
-      this._addLayer({
-        id: trailLay,
-        type: 'line',
-        source: trailSrc,
-        paint: { 'line-color': this._colour, 'line-width': 1, 'line-dasharray': [3, 3], 'line-opacity': 0.35 },
-      })
-
-      // Drone HTML marker — spawns at centroid, scaled down
-      const el = document.createElement('div')
-      el.style.cssText = 'width:28px;height:28px;pointer-events:none;transform:scale(0.3);opacity:0;'
-      el.innerHTML = rotaryDroneSVG(this._colour, '#00FF88')
-      const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
-        .setLngLat([this._dst.lon, this._dst.lat])
-        .addTo(this._map)
-      this._droneEls.push(el)
-      this._droneMarkers.push(marker)
-
-      // CSS spawn animation (next frame so browser applies initial state first)
-      requestAnimationFrame(() => {
-        el.style.transition = 'transform 600ms ease-out, opacity 600ms ease-out'
-        el.style.transform = 'scale(1)'
-        el.style.opacity = '1'
-      })
     }
 
-    // rAF lerp drones to patrol centres over 800ms (+ keep fw orbiting)
+    // Keep fw orbiting during burst, then move to patrol phase
     const moveStart = performance.now()
-    const centLon = this._dst.lon, centLat = this._dst.lat
-
     const moveTick = (now) => {
-      const t  = Math.min((now - moveStart) / 800, 1)
-      const te = ease(t)
-
-      for (let i = 0; i < this._N; i++) {
-        const pc = this._patrolCenters[i]
-        this._droneMarkers[i].setLngLat([
-          centLon + (pc.lon - centLon) * te,
-          centLat + (pc.lat - centLat) * te,
-        ])
-      }
-
-      // Keep fw orbiting during burst
+      const t = Math.min((now - moveStart) / 800, 1)
       this._advanceFwOrbit()
-
       if (t < 1) {
         this._rafId = requestAnimationFrame(moveTick)
       } else {
-        // Clear CSS transitions before patrol loop takes over
-        for (const el of this._droneEls) el.style.transition = 'none'
         this._rafId = null
         this._phase6_patrol()
       }
@@ -536,42 +470,16 @@ class DispatchAnimation {
     this._rafId = requestAnimationFrame(moveTick)
   }
 
-  // ── Phase 6: Continuous patrol ────────────────────────────────────────────
+  // ── Phase 6: Continuous patrol — fixed-wing only ─────────────────────────
 
   _phase6_patrol() {
     fireAgentEvent('AGENT_2', `Zone coverage active · ${this._N} drones monitoring`)
 
     if (this._completeCb) this._completeCb()
 
+    // Only the fixed-wing continues orbiting — rotary drones appear via telemetry
     const tick = () => {
-      // Fixed-wing continues slow high orbit at 50% opacity
       this._advanceFwOrbit()
-
-      // Each rotary drone orbits its patrol centre
-      for (let i = 0; i < this._N; i++) {
-        const dir = i % 2 === 0 ? 1 : -1
-        this._droneAngles[i] += dir * 0.04
-
-        const pc  = this._patrolCenters[i]
-        const a   = this._droneAngles[i]
-        const lon = pc.lon + Math.cos(a) * 0.00016
-        const lat = pc.lat + Math.sin(a) * 0.00016
-
-        this._droneMarkers[i].setLngLat([lon, lat])
-
-        // Heading: tangent to circular orbit
-        const hDeg = (a + (dir > 0 ? Math.PI / 2 : -Math.PI / 2)) * 180 / Math.PI
-        this._droneEls[i].style.transform = `rotate(${hDeg}deg)`
-
-        this._droneTrailPts[i].push([lon, lat])
-        if (this._droneTrailPts[i].length > 20) this._droneTrailPts[i].shift()
-        this._map.getSource(`dispatch-drone-trail-${i}-source`)?.setData({
-          type: 'Feature',
-          geometry: { type: 'LineString', coordinates: this._droneTrailPts[i] },
-          properties: {},
-        })
-      }
-
       this._rafId = requestAnimationFrame(tick)
     }
     this._rafId = requestAnimationFrame(tick)

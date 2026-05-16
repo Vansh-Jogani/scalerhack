@@ -3,6 +3,8 @@ import Map from './Map'
 import CommandDashboard from './CommandDashboard'
 import MapStateManager from './MapStateManager'
 
+const MAX_ENTRIES = 150
+
 function deriveSystemStatus(incidents) {
   const vals = Object.values(incidents)
   if (vals.some((i) => i.status === 'EMERGENCY')) return 'EMERGENCY'
@@ -13,21 +15,38 @@ function deriveSystemStatus(incidents) {
 function useReconnectingWS(path, onMessage) {
   const cbRef = useRef(onMessage)
   cbRef.current = onMessage
+  const wsRef = useRef(null)
+  const [connected, setConnected] = useState(false)
+
   useEffect(() => {
-    let ws
     let stopped = false
     function connect() {
       const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
       const url = `${protocol}://${window.location.host}${path}`
-      ws = new WebSocket(url)
+      const ws = new WebSocket(url)
+      wsRef.current = ws
+      ws.onopen = () => setConnected(true)
       ws.onmessage = (e) => {
-        try { cbRef.current(JSON.parse(e.data)) } catch {}
+        try { cbRef.current(JSON.parse(e.data)) } catch (_) {}
       }
-      ws.onclose = () => { if (!stopped) setTimeout(connect, 2000) }
+      ws.onclose = () => {
+        setConnected(false)
+        wsRef.current = null
+        if (!stopped) setTimeout(connect, 2000)
+      }
+      ws.onerror = () => ws.close()
     }
     connect()
-    return () => { stopped = true; ws?.close() }
+    return () => { stopped = true; wsRef.current?.close() }
   }, [path])
+
+  const send = useCallback((data) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(data))
+    }
+  }, [])
+
+  return { connected, send }
 }
 
 function App() {
@@ -35,11 +54,12 @@ function App() {
   const [isSelectingLocation, setIsSelectingLocation] = useState(false)
   const [capturedCoords, setCapturedCoords] = useState(null)
   const [advisory, setAdvisory] = useState(null)
+  const [agentEntries, setAgentEntries] = useState([])
 
   const activeIncidentType = Object.values(incidents)[0]?.type || null
   const systemStatus = deriveSystemStatus(incidents)
 
-  useReconnectingWS('/ws', useCallback((msg) => {
+  const { connected: wsConnected, send: wsSend } = useReconnectingWS('/ws', useCallback((msg) => {
     if (msg.type === 'map_update') {
       MapStateManager.receive(msg)
       if (msg.action === 'add_marker' && msg.incident_id && msg.payload) {
@@ -82,21 +102,27 @@ function App() {
       })
     }
     if (msg.type === 'advisory') {
-      setAdvisory({ text: msg.data?.text || '', timestamp: new Date().toISOString() })
+      setAdvisory(msg.data || {})
     }
     if (msg.type === 'agent_stream') {
-      window.dispatchEvent(new CustomEvent('aria-agent-event', {
-        detail: {
-          agent: msg.data?.agent_id?.toUpperCase()?.replace('-', '_') || 'ORCHESTRATOR',
-          text: msg.data?.content || msg.data?.event || '',
-        },
-      }))
+      const d = msg.data || {}
+      const agent = (d.agent_id || '')
+        .replace('agent-', 'AGENT_')
+        .replace('orchestrator', 'ORCHESTRATOR')
+        .toUpperCase()
+      const content = typeof d.content === 'string' ? d.content : JSON.stringify(d.content)
+      setAgentEntries((prev) => {
+        const next = [{
+          id: `${Date.now()}-${Math.random()}`,
+          agent,
+          event: d.event || '',
+          content,
+          ts: new Date().toTimeString().slice(0, 8),
+        }, ...prev]
+        return next.length > MAX_ENTRIES ? next.slice(0, MAX_ENTRIES) : next
+      })
     }
   }, []))
-
-  function handleAdvisoryUpdate(text, timestamp) {
-    setAdvisory({ text, timestamp })
-  }
 
   function handleStartSelectLocation() {
     setIsSelectingLocation(true)
@@ -139,7 +165,9 @@ function App() {
           capturedCoords={capturedCoords}
           activeIncidentType={activeIncidentType}
           advisory={advisory}
-          onAdvisoryUpdate={handleAdvisoryUpdate}
+          agentEntries={agentEntries}
+          wsConnected={wsConnected}
+          onSend={wsSend}
         />
       </div>
     </div>

@@ -14,6 +14,7 @@ from typing import TypedDict, Any
 
 import structlog
 from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 from orchestrator.classifier import classify
 from orchestrator.incident_manager import IncidentManager
@@ -80,12 +81,17 @@ class ARIAOrchestrator:
         # SQLite checkpointer setup
         self._db_path = Path("state")
         self._db_path.mkdir(exist_ok=True)
+        self._checkpointer_path = str(self._db_path / "aria_state.db")
 
-        # Build the LangGraph state machine
+        # Build the LangGraph state machine (checkpointer wired in async init)
         self._graph = self._build_graph()
+        self._checkpointer: AsyncSqliteSaver | None = None
 
     def _build_graph(self) -> StateGraph:
-        """Build the LangGraph StateGraph with deterministic transitions."""
+        """Build the LangGraph StateGraph with deterministic transitions.
+
+        Checkpointer is wired lazily in _run_graph via AsyncSqliteSaver context manager.
+        """
         graph = StateGraph(IncidentState)
 
         # Add nodes — each is a deterministic function, NOT an LLM
@@ -108,6 +114,24 @@ class ARIAOrchestrator:
         graph.add_edge("emergency", END)
 
         return graph.compile()
+
+    def _build_graph_with_checkpointer(self, checkpointer) -> StateGraph:
+        """Compile the graph with a live SQLite checkpointer for crash-safe persistence."""
+        graph = StateGraph(IncidentState)
+        graph.add_node("standby", self._standby_node)
+        graph.add_node("surveillance", self._surveillance_node)
+        graph.add_node("classify", self._classify_node)
+        graph.add_node("swarm", self._swarm_node)
+        graph.add_node("advisory", self._advisory_node)
+        graph.add_node("emergency", self._emergency_node)
+        graph.set_entry_point("standby")
+        graph.add_edge("standby", "surveillance")
+        graph.add_edge("surveillance", "classify")
+        graph.add_edge("classify", "swarm")
+        graph.add_edge("swarm", "advisory")
+        graph.add_edge("advisory", END)
+        graph.add_edge("emergency", END)
+        return graph.compile(checkpointer=checkpointer)
 
     # ------------------------------------------------------------------
     # Node functions — deterministic, NO LLM calls
@@ -247,6 +271,7 @@ class ARIAOrchestrator:
             stream_callback=self.event_callback,
         )
 
+        advisory: dict = {}
         try:
             advisory = await agent3.on_trigger(
                 trigger_type="agent_2_findings_updated",
@@ -267,7 +292,7 @@ class ARIAOrchestrator:
         return {
             "current_state": "ADVISORY_ACTIVE",
             "comms_log": {
-                "latest_advisory": advisory if 'advisory' in dir() else {},
+                "latest_advisory": advisory,
             },
         }
 
@@ -354,9 +379,12 @@ class ARIAOrchestrator:
         return agent1_payload
 
     async def _run_graph(self, initial_state: IncidentState) -> None:
-        """Execute the LangGraph state machine."""
+        """Execute the LangGraph state machine with SQLite checkpointer."""
         try:
-            result = await self._graph.ainvoke(initial_state)
+            async with AsyncSqliteSaver.from_conn_string(self._checkpointer_path) as checkpointer:
+                graph = self._build_graph_with_checkpointer(checkpointer)
+                config = {"configurable": {"thread_id": f"incident-{id(initial_state)}"}}
+                result = await graph.ainvoke(initial_state, config=config)
             self.state = result.get("current_state", "STANDBY")
             logger.info("graph_completed", final_state=self.state)
         except Exception as e:
@@ -388,7 +416,18 @@ class ARIAOrchestrator:
             await self._emit("advisory", advisory)
 
     def receive_agent1_report(self, report: dict) -> None:
-        """Receive classification report from Agent 1."""
+        """Receive classification report from Agent 1.
+
+        Enriches the report with area context from active_incident so Agent 2
+        knows where to deploy its swarm.
+        """
+        # Enrich with area context — Agent 2 needs center + radius_m
+        if self.active_incident:
+            area = self.active_incident.get("area", {})
+            report["area"] = {
+                "center": area.get("center", {}),
+                "radius_m": area.get("radius_m", 200.0),
+            }
         self.agent1_report = report
         logger.info("agent1_report_received",
                     classification=report.get("classification"),
@@ -399,6 +438,54 @@ class ARIAOrchestrator:
         self.agent2_report = report
         logger.info("agent2_report_received",
                     coverage=report.get("coverage_pct"))
+
+    async def on_go_signal(self, marker: dict, confidence: float = 100.0,
+                           signal_sources: list | None = None,
+                           zone_polygon: list | None = None) -> dict:
+        """Entry point for AlertDetector autonomous dispatch.
+
+        Translates the WorldState marker schema into the receive_go_signal
+        payload format, then delegates to the existing pipeline.
+
+        Args:
+            marker: {id, lat, lon, type, radius_m, severity, confirmed}
+            confidence: fused confidence score (0–100)
+            signal_sources: list of source names that contributed
+            zone_polygon: optional drawn zone vertices from admin panel
+        """
+        logger.info(
+            "on_go_signal",
+            marker_id=marker.get("id"),
+            lat=marker.get("lat"),
+            lon=marker.get("lon"),
+            disaster_type=marker.get("type"),
+            confidence=confidence,
+            signal_sources=signal_sources or [],
+        )
+
+        area: dict = {
+            "center": {
+                "lat": marker["lat"],
+                "lon": marker["lon"],
+            },
+            "radius_m": marker.get("radius_m", 500.0),
+        }
+        if zone_polygon:
+            area["boundary_polygon"] = zone_polygon
+
+        payload = {
+            "area": area,
+            "disaster_type": marker.get("type", "unknown"),
+            "alert_metadata": {
+                "confidence": confidence,
+                "signal_sources": signal_sources or [],
+                "marker_id": marker.get("id"),
+                "confirmed": marker.get("confirmed", False),
+                "severity": marker.get("severity", "medium"),
+            },
+        }
+
+        return await self.receive_go_signal(payload)
 
     def get_incident_context(self) -> dict | None:
         """Return full incident context (used by sensor overlay, not agents)."""

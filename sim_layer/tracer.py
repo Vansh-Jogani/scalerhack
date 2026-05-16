@@ -9,9 +9,20 @@ class Span:
     def __init__(self, name: str, attrs: dict):
         self._name = name
         self._attrs = dict(attrs)
+        self.events: list[dict] = []
 
     def set_attribute(self, key: str, value) -> None:
         self._attrs[key] = value
+
+    def add_event(self, name: str, attributes: dict | None = None) -> None:
+        """Append a timestamped event to this span."""
+        import datetime
+        self.events.append({
+            "name": name,
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "attributes": attributes or {},
+        })
+        logger.debug("trace_span_event", span=self._name, event=name, **(attributes or {}))
 
     def __enter__(self) -> "Span":
         return self

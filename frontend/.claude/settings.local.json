@@ -10,7 +10,8 @@
       "Bash(pkill -f \"python3 main.py\")",
       "Bash(pkill -f \"vite\")",
       "Bash(npm install *)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(npx eslint *)"
     ]
   }
 }

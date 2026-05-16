@@ -13,13 +13,15 @@ import structlog
 import uvicorn
 import yaml
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from sim.world_state import WorldState
 from sim.sensor_overlay import SensorOverlay
 from orchestrator.orchestrator import ARIAOrchestrator
+from alert_detector.detector import AlertDetector
+from sim_layer.fastapi_routes import router as sim_router, set_detector
 
 load_dotenv()
 structlog.configure(
@@ -37,6 +39,7 @@ with open(config_path) as f:
 world_state: WorldState | None = None
 sensor_overlay: SensorOverlay | None = None
 orchestrator: ARIAOrchestrator | None = None
+alert_detector: AlertDetector | None = None
 connected_clients: list[WebSocket] = []
 heartbeat_task: asyncio.Task | None = None
 
@@ -135,7 +138,7 @@ async def world_event_task(delay: int = 90):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global world_state, sensor_overlay, orchestrator, heartbeat_task
+    global world_state, sensor_overlay, orchestrator, heartbeat_task, alert_detector
 
     scenario_path = Path(config["simulation"]["scenario"])
     world_state = WorldState(scenario_path)
@@ -155,6 +158,11 @@ async def lifespan(app: FastAPI):
         world_state.home_position["lon"],
     )
 
+    # Alert detector — autonomous signal fusion
+    alert_detector = AlertDetector(config=config, orchestrator=orchestrator)
+    set_detector(alert_detector)
+    detector_task = asyncio.create_task(alert_detector.start())
+
     tick_rate = config["simulation"]["tick_rate_hz"]
     tick_task = asyncio.create_task(tick_loop(tick_rate))
     bcast_task = asyncio.create_task(broadcast_loop())
@@ -165,6 +173,7 @@ async def lifespan(app: FastAPI):
     tick_task.cancel()
     bcast_task.cancel()
     heartbeat_task.cancel()
+    detector_task.cancel()
 
 
 # ---------------------------------------------------------------------------
@@ -173,11 +182,24 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="ARIA v1", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.include_router(sim_router)
 
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/sim/state")
+async def sim_state():
+    """Return current simulation state — drone positions, markers, orchestrator state."""
+    if world_state is None:
+        return {"drones": [], "markers": [], "orchestrator_state": "OFFLINE"}
+    return {
+        "drones": world_state.get_all_telemetry(),
+        "markers": [m.model_dump() for m in world_state.get_markers()],
+        "orchestrator_state": orchestrator.state if orchestrator else "OFFLINE",
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -195,26 +217,30 @@ class IncidentCreateRequest(BaseModel):
 
 @app.post("/api/incident/create")
 async def create_incident(request: IncidentCreateRequest):
-    """Create a new incident from the admin panel.
+    """Admin panel deploys a disaster — routed through the alert detector as a
+    manual trigger so the full detection pipeline is always exercised.
 
-    Transforms the frontend's flat payload into the orchestrator's
-    expected format (area dict + disaster_type).
+    The detector treats this as 100% confidence and fires on_go_signal()
+    → orchestrator.on_go_signal() → receive_go_signal() → Agent 1 starts.
     """
-    # Build area dict in the format orchestrator expects
-    area = {
-        "center": {"lat": request.lat, "lon": request.lon},
-    }
-    if request.zone_polygon:
-        area["boundary_polygon"] = request.zone_polygon
-    if request.zone_radius_m:
-        area["radius_m"] = request.zone_radius_m
+    if alert_detector is None:
+        raise HTTPException(status_code=503, detail="Alert detector not initialised")
 
-    payload = {
-        "area": area,
-        "disaster_type": request.type,
-    }
+    logger.info(
+        "admin_deploy_incident",
+        lat=request.lat, lon=request.lon,
+        disaster_type=request.type, severity=request.severity,
+    )
 
-    agent1_payload = await orchestrator.receive_go_signal(payload)
+    # Pass zone geometry into the detector so the orchestrator gets it
+    await alert_detector.on_manual_trigger(
+        lat=request.lat,
+        lon=request.lon,
+        disaster_type=request.type,
+        severity=request.severity,
+        zone_radius_m=request.zone_radius_m,
+        zone_polygon=request.zone_polygon,
+    )
 
     # Schedule world event (fire growth after 90 seconds)
     asyncio.create_task(world_event_task(delay=90))
@@ -223,7 +249,6 @@ async def create_incident(request: IncidentCreateRequest):
         "status": "ok",
         "incident_type": request.type,
         "severity": request.severity,
-        "agent1_payload": agent1_payload,
     }
 
 

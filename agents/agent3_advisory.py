@@ -1,10 +1,13 @@
-"""Agent 3 — Advisory Agent (Claude API).
+"""Agent 3 — Advisory Agent (Claude API, claude-sonnet-4-20250514).
 
 Event-driven — NOT a loop. Does NOT inherit BaseAgent.
 Produces structured advisory for human first responders.
 
 System prompt is EXACTLY from SPEC.md AGENT_3_SYSTEM_PROMPT.
 Output format: 6 named sections in plain text.
+
+Uses the Anthropic API (ANTHROPIC_API_KEY from env). Model is injected by
+the orchestrator (claude-sonnet-4-20250514). No Ollama dependency.
 
 Triggers per SPEC.md AGENT_3_CONFIG:
   - agent_1_report_received
@@ -17,12 +20,18 @@ Triggers per SPEC.md AGENT_3_CONFIG:
 import asyncio
 from datetime import datetime, timezone
 
+import anthropic
 import structlog
-from anthropic import AsyncAnthropic
 
 from sim_layer.tracer import tracer
 
 logger = structlog.get_logger()
+
+DEFAULT_MODEL = "claude-sonnet-4-20250514"
+
+# Module-level tracker: ensures only one debounce task runs across all instances.
+# New instances cancel stale tasks from previous instances.
+_active_debounce_task: asyncio.Task | None = None
 
 # Verbatim from SPEC.md — do not modify
 AGENT_3_SYSTEM_PROMPT = """You are ARIA Advisory Agent. You issue response plans for human first responders.
@@ -61,13 +70,13 @@ class AdvisoryAgent:
     """Agent 3: Advisory — produces response plans for first responders.
 
     Event-driven, NOT a loop. Triggered by orchestrator on specific events.
-    Uses Claude API for reasoning.
+    Uses the Anthropic API (claude-sonnet-4-20250514). No Ollama dependency.
     """
 
     def __init__(
         self,
         agent_id: str,
-        model: str = "claude-sonnet-4-20250514",
+        model: str = DEFAULT_MODEL,
         orchestrator=None,
         stream_callback=None,
     ):
@@ -75,12 +84,15 @@ class AdvisoryAgent:
         self.model = model
         self.orchestrator = orchestrator
         self.stream_callback = stream_callback
-        self.client = AsyncAnthropic()
         self.latest_advisory: dict | None = None
 
         # Debounce state for agent_2_findings_updated
         self._debounce_task: asyncio.Task | None = None
         self._debounce_pending: dict | None = None
+
+    # ------------------------------------------------------------------
+    # Public entry point
+    # ------------------------------------------------------------------
 
     async def on_trigger(
         self,
@@ -99,21 +111,24 @@ class AdvisoryAgent:
 
         return await self._execute(trigger_type, agent1_report, agent2_report, extra_context)
 
+    # ------------------------------------------------------------------
+    # Debounce
+    # ------------------------------------------------------------------
+
     async def _debounced_trigger(
         self, agent1_report: dict, agent2_report: dict, extra_context: dict | None
     ) -> dict:
-        """15-second debounce for agent_2_findings_updated.
+        """15-second debounce for agent_2_findings_updated."""
+        global _active_debounce_task
 
-        Multiple rapid world state writes batch into one invocation.
-        """
         self._debounce_pending = {
             "agent1_report": agent1_report,
             "agent2_report": agent2_report,
             "extra_context": extra_context,
         }
 
-        if self._debounce_task and not self._debounce_task.done():
-            # Already waiting — the pending data will be used when the timer fires
+        # Cancel any stale task from a previous AdvisoryAgent instance
+        if _active_debounce_task and not _active_debounce_task.done():
             logger.info("advisory_debounce_merged", trigger="agent_2_findings_updated")
             return self.latest_advisory or {"text": "Advisory update pending (debounced)..."}
 
@@ -130,8 +145,12 @@ class AdvisoryAgent:
                 )
 
         self._debounce_task = asyncio.create_task(_fire_after_delay())
-        # Return current advisory immediately; the debounced one will emit via callback
+        _active_debounce_task = self._debounce_task
         return self.latest_advisory or {"text": "Advisory update pending (debounced)..."}
+
+    # ------------------------------------------------------------------
+    # Core execution
+    # ------------------------------------------------------------------
 
     async def _execute(
         self,
@@ -140,19 +159,15 @@ class AdvisoryAgent:
         agent2_report: dict,
         extra_context: dict | None = None,
     ) -> dict:
-        """Execute advisory generation via Claude API."""
+        """Execute advisory generation via the Anthropic API."""
+        # Emit started event
+        await self._emit("started", {"trigger_type": trigger_type})
+
         with tracer.start_span("agent3.advisory", trigger=trigger_type):
             prompt = self._build_prompt(trigger_type, agent1_report, agent2_report, extra_context)
 
             try:
-                response = await self.client.messages.create(
-                    model=self.model,
-                    max_tokens=2048,
-                    system=AGENT_3_SYSTEM_PROMPT,
-                    messages=[{"role": "user", "content": prompt}],
-                )
-
-                text = self._extract_text(response)
+                text = await self._call_claude(prompt)
 
                 # Validate all 6 sections present
                 if not self._validate_sections(text):
@@ -162,31 +177,28 @@ class AdvisoryAgent:
                         prompt + "\n\nYou MUST include all six sections. "
                         "Missing sections will cause system failure."
                     )
-                    response = await self.client.messages.create(
-                        model=self.model,
-                        max_tokens=2048,
-                        system=AGENT_3_SYSTEM_PROMPT,
-                        messages=[{"role": "user", "content": retry_prompt}],
-                    )
-                    text = self._extract_text(response)
+                    text = await self._call_claude(retry_prompt)
 
                     if not self._validate_sections(text):
                         logger.error("advisory_retry_failed", trigger=trigger_type)
                         text = self._error_advisory(agent1_report, agent2_report)
 
+                sections = self._parse_sections(text)
                 advisory = {
                     "text": text,
                     "trigger": trigger_type,
                     "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "sections": self._parse_sections(text),
+                    "sections": sections,
                 }
 
                 self.latest_advisory = advisory
                 logger.info("advisory_issued", trigger=trigger_type)
 
-                # Emit via callback if available
-                if self.stream_callback:
-                    await self.stream_callback("advisory", advisory)
+                # Emit completed event (orchestrator handles the advisory broadcast)
+                await self._emit("completed", {
+                    "trigger": trigger_type,
+                    "sections": list(sections.keys()),
+                })
 
                 return advisory
 
@@ -202,6 +214,25 @@ class AdvisoryAgent:
                 self.latest_advisory = advisory
                 return advisory
 
+    # ------------------------------------------------------------------
+    # Anthropic API client
+    # ------------------------------------------------------------------
+
+    async def _call_claude(self, prompt: str) -> str:
+        """Call the Anthropic API and return the response text."""
+        client = anthropic.AsyncAnthropic()
+        message = await client.messages.create(
+            model=self.model,
+            max_tokens=2048,
+            system=AGENT_3_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return message.content[0].text
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
     def _build_prompt(
         self,
         trigger_type: str,
@@ -209,30 +240,24 @@ class AdvisoryAgent:
         agent2_report: dict,
         extra_context: dict | None,
     ) -> str:
-        """Build the user prompt from available reports."""
         parts = [f"Trigger: {trigger_type}\n"]
-
         if agent1_report:
             parts.append(f"SURVEILLANCE REPORT (Agent 1):\n{agent1_report}\n")
         if agent2_report:
             parts.append(f"SPECIALIST SWARM FINDINGS (Agent 2):\n{agent2_report}\n")
         if extra_context:
             parts.append(f"ADDITIONAL CONTEXT:\n{extra_context}\n")
-
         parts.append(
             "Based on the above, produce your advisory now. "
             "Include all six sections in the specified format."
         )
-
         return "\n".join(parts)
 
     def _validate_sections(self, text: str) -> bool:
-        """Check that all 6 required sections are present."""
         upper = text.upper()
         return all(section in upper for section in REQUIRED_SECTIONS)
 
     def _parse_sections(self, text: str) -> dict:
-        """Parse the 6 sections from advisory text into a dict."""
         sections = {}
         current_section = None
         current_lines = []
@@ -245,7 +270,6 @@ class AdvisoryAgent:
                     if current_section:
                         sections[current_section] = "\n".join(current_lines).strip()
                     current_section = section.lower().replace(" ", "_")
-                    # Get content after the colon on the same line
                     colon_idx = line.find(":")
                     if colon_idx >= 0:
                         remainder = line[colon_idx + 1:].strip()
@@ -263,7 +287,6 @@ class AdvisoryAgent:
         return sections
 
     def _error_advisory(self, agent1_report: dict, agent2_report: dict) -> str:
-        """Produce a structured error advisory — never crashes."""
         classification = agent1_report.get("classification", "unknown")
         confidence = agent1_report.get("confidence", 0)
         return (
@@ -280,10 +303,14 @@ class AdvisoryAgent:
             f"MONITORING: Drone surveillance active, update frequency: manual"
         )
 
-    def _extract_text(self, response) -> str:
-        """Extract text from Claude response."""
-        parts = []
-        for block in response.content:
-            if block.type == "text":
-                parts.append(block.text)
-        return "\n".join(parts)
+    async def _emit(self, event: str, content) -> None:
+        """Emit agent_stream event via stream_callback."""
+        if self.stream_callback:
+            try:
+                await self.stream_callback("agent_stream", {
+                    "agent_id": self.agent_id,
+                    "event": event,
+                    "content": content,
+                })
+            except Exception as e:
+                logger.warning("agent3_emit_error", event=event, error=str(e))

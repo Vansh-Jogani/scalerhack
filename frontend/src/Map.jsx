@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import MapStateManager from './MapStateManager.js'
-import DroneManager from './DroneManager.js'
+import DroneDotLayer from './DroneDotLayer.js'
 import { DISASTER_COLORS, DISASTER_LABELS, DISASTER_COLOR_MAP, MAX_ZONE_RADIUS_M } from './constants.js'
 import responseCentres from './data/response_centres.json'
 import DispatchAnimation, { findNearestCentre } from './DispatchAnimation.js'
@@ -266,8 +266,8 @@ function Map({ isSelectingLocation, onLocationSelect, incidents, systemStatus })
         map.getCanvas().style.cursor = selectingRef.current ? 'crosshair' : ''
       })
 
-      MapStateManager.init(map, DroneManager, _onIncidentAdd)
-      DroneManager.init(map)
+      MapStateManager.init(map, DroneDotLayer, _onIncidentAdd)
+      DroneDotLayer.init(map)
     })
 
     // Coordinate readout
@@ -332,7 +332,7 @@ function Map({ isSelectingLocation, onLocationSelect, incidents, systemStatus })
     return () => {
       _dispatchAnim?.stop()
       _dispatchAnim = null
-      DroneManager.destroy()
+      DroneDotLayer.destroy()
       MapStateManager.destroy()
       _drawMapRef = null
       map.remove()

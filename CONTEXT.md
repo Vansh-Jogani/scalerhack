@@ -81,7 +81,7 @@ Format: `YYYY-MM-DD — symptom — root cause — fix`
 ## Conventions established
 
 - **File layout:** matches spec exactly. Do not invent new directories.
-- **Python version:** 3.11
+- **Python version:** 3.13.4 (venv; CONTEXT.md previously said 3.11 — actual venv is 3.13.4)
 - **Node version:** 22 LTS
 - **Test framework:** pytest + pytest-asyncio
 - **Logging:** structlog (ConsoleRenderer in dev, JSON in prod)

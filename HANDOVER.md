@@ -4,6 +4,32 @@
 > Add an entry after: stage completion, blocker hit, architectural decision, end of session.
 > Format below. Keep entries tight — full prose belongs in `CONTEXT.md`.
 
+## [2026-05-16 SESSION] — Bug fixes: 8 reconciliation issues resolved, 61/61 tests passing
+**Stage:** Stage 5 — Demo Polish (pre-flight fixes)
+**State:** working
+**What got done:**
+- config.yaml: model names corrected to `claude-sonnet-4-20250514` (were `claude-sonnet-4-6`)
+- agent2_specialist.py: full rewrite — now inherits BaseAgent, accepts `swarm_config` as injected param (no self-selection), removed duplicate SWARM_CAPABILITIES dict, removed duplicate REPORT_FINDINGS_TOOL, added all 6 SPEC.md tools (fly_to, loiter_over, get_sensor_reading, zone_annotate, survivor_marker, report_findings), renamed `run()` → `run_mission()` to match orchestrator call site, added arrival timeout
+- orchestrator.py: wired AsyncSqliteSaver (langgraph-checkpoint-sqlite 3.1.0), added `_build_graph_with_checkpointer()`, fixed `_advisory_node` `dir()` bug → proper `advisory: dict = {}` init, enriched `receive_agent1_report()` to inject area context so Agent 2 knows where to deploy
+- base_agent.py: added `register_tool()` method (used by tests)
+- tests/test_base_agent.py: fixed `make_agent` fixture (added sensor_overlay + tool_handlers), fixed 2 test assertions to match actual BaseAgent behaviour
+- requirements.txt: added `langgraph-checkpoint-sqlite>=3.0`
+**What's next:**
+- Stage 5 — Demo Polish: second scenario, multi-incident test, demo script
+**Blockers / open questions:**
+- none
+**Files touched:**
+- config.yaml
+- agents/agent2_specialist.py (full rewrite)
+- agents/base_agent.py (added register_tool)
+- orchestrator/orchestrator.py (SqliteSaver, advisory fix, area enrichment)
+- requirements.txt (langgraph-checkpoint-sqlite)
+- tests/test_base_agent.py (fixture + assertion fixes)
+**Notes for next session:**
+- langgraph-checkpoint-sqlite 3.1.0 installed, import path: `langgraph.checkpoint.sqlite.aio.AsyncSqliteSaver`
+- All 8 reconciliation bugs resolved. Architecture is now clean per SPEC.md.
+- 61/61 tests passing
+
 ## [2026-05-16 01:48] — Stages 2-4 complete — full backend agent layer implemented
 **Stage:** Stage 4 (COMPLETE — all checkpoints verified)
 **State:** working

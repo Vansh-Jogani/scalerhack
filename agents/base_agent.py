@@ -116,7 +116,8 @@ class BaseAgent(ABC):
     async def act(self, response) -> list[dict]:
         """Execute tool_use blocks from LLM response.
 
-        Calls registered tool handlers. Returns list of {tool, input, result}.
+        Emits tool_call before each handler, tool_result after success,
+        error on exception. Returns list of {tool, input, result}.
         """
         results = []
         for block in response.content:
@@ -124,12 +125,19 @@ class BaseAgent(ABC):
                 tool_name = block.name
                 tool_input = block.input
                 handler = self._tool_handlers.get(tool_name)
+
+                # Emit tool_call before execution
+                await self._emit("tool_call", {"tool": tool_name, "input": tool_input})
+
                 if handler:
                     try:
                         result = await handler(**tool_input)
+                        # Emit tool_result after successful execution
+                        await self._emit("tool_result", {"tool": tool_name, "result": result})
                     except Exception as e:
                         result = {"status": "error", "message": str(e)}
                         logger.error("tool_error", agent=self.agent_id, tool=tool_name, error=str(e))
+                        await self._emit("error", {"tool": tool_name, "error": str(e)})
                     results.append({
                         "tool": tool_name,
                         "tool_use_id": block.id,
@@ -139,11 +147,13 @@ class BaseAgent(ABC):
                     logger.info("tool_executed", agent=self.agent_id, tool=tool_name)
                 else:
                     logger.warning("unknown_tool", agent=self.agent_id, tool=tool_name)
+                    result = {"status": "error", "message": f"Unknown tool: {tool_name}"}
+                    await self._emit("error", {"tool": tool_name, "error": f"Unknown tool: {tool_name}"})
                     results.append({
                         "tool": tool_name,
                         "tool_use_id": block.id,
                         "input": tool_input,
-                        "result": {"status": "error", "message": f"Unknown tool: {tool_name}"},
+                        "result": result,
                     })
 
         return results
@@ -295,6 +305,10 @@ class BaseAgent(ABC):
                 })
             except Exception as e:
                 logger.warning("emit_error", agent=self.agent_id, error=str(e))
+
+    def register_tool(self, name: str, handler) -> None:
+        """Register or replace a tool handler by name. Used in tests."""
+        self._tool_handlers[name] = handler
 
     def stop(self) -> None:
         """Signal the agent to stop its OODA-R loop."""

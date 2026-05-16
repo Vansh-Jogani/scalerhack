@@ -27,9 +27,10 @@ REPORT_CLASSIFICATION_TOOL = {
             },
             "confidence": {"type": "number", "description": "Classification confidence 0.0-1.0"},
             "affected_area_m2": {"type": "number", "description": "Estimated affected area in square meters"},
+            "recommended_drone_count": {"type": "integer", "description": "Number of specialist drones recommended based on sensor analysis"},
             "notes": {"type": "string", "description": "Additional observations"},
         },
-        "required": ["incident_type", "confidence", "affected_area_m2", "notes"],
+        "required": ["incident_type", "confidence", "affected_area_m2", "recommended_drone_count", "notes"],
     },
 }
 
@@ -48,17 +49,49 @@ REQUEST_DETAILED_PASS_TOOL = {
 }
 
 
-def create_report_classification_handler(orchestrator):
-    """Create report_classification handler. Writes to orchestrator state."""
-    async def report_classification(incident_type: str, confidence: float, affected_area_m2: float, notes: str) -> dict:
+def create_report_classification_handler(orchestrator, stream_callback=None, agent_id: str = "agent-1"):
+    """Create report_classification handler. Writes to orchestrator state and emits stream events."""
+    async def report_classification(
+        incident_type: str,
+        confidence: float,
+        affected_area_m2: float,
+        notes: str,
+        recommended_drone_count: int = 3,
+    ) -> dict:
         report = {
             "classification": incident_type,
             "confidence": confidence,
             "affected_area_m2": affected_area_m2,
+            "recommended_drone_count": recommended_drone_count,
             "notes": notes,
         }
         with tracer.start_span("agent1.report_classification", classification=incident_type, confidence=confidence):
             orchestrator.receive_agent1_report(report)
+
+        # Emit classification stream event
+        if stream_callback:
+            try:
+                await stream_callback("agent_stream", {
+                    "agent_id": agent_id,
+                    "event": "classification",
+                    "content": {
+                        "incident_type": incident_type,
+                        "confidence": confidence,
+                        "affected_area_m2": affected_area_m2,
+                    },
+                })
+                # Emit Assessment_Panel_Event for frontend overlay
+                await stream_callback("assessment_panel", {
+                    "agent_id": agent_id,
+                    "incident_type": incident_type,
+                    "confidence": confidence,
+                    "affected_area_m2": affected_area_m2,
+                    "recommended_drone_count": recommended_drone_count,
+                })
+            except Exception as e:
+                import structlog as _sl
+                _sl.get_logger().warning("classification_emit_error", error=str(e))
+
         return {
             "accepted": True,
             "orchestrator_state": orchestrator.state if hasattr(orchestrator, "state") else "unknown",
@@ -192,9 +225,25 @@ def create_survivor_marker_handler():
     return survivor_marker
 
 
-def create_report_findings_handler(orchestrator):
-    """Create report_findings handler. Writes to orchestrator."""
+def create_report_findings_handler(orchestrator, stream_callback=None, agent_id: str = "agent-2"):
+    """Create report_findings handler. Writes to orchestrator and emits completed event."""
     async def report_findings(**kwargs) -> dict:
         orchestrator.receive_agent2_report(kwargs)
+
+        # Emit completed event
+        if stream_callback:
+            try:
+                await stream_callback("agent_stream", {
+                    "agent_id": agent_id,
+                    "event": "completed",
+                    "content": {
+                        "coverage_pct": kwargs.get("coverage_pct", 0),
+                        "zones_assessed": len(kwargs.get("zones_assessed", [])),
+                    },
+                })
+            except Exception as e:
+                import structlog as _sl
+                _sl.get_logger().warning("report_findings_emit_error", error=str(e))
+
         return {"status": "ok", "message": "Findings reported to orchestrator"}
     return report_findings

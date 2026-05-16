@@ -91,7 +91,11 @@ class SurveillanceAgent(BaseAgent):
             "fly_to": create_fly_to_handler(world_state),
             "loiter_over": create_loiter_over_handler(world_state),
             "get_sensor_reading": create_get_sensor_reading_handler(sensor_overlay, world_state),
-            "report_classification": create_report_classification_handler(orchestrator),
+            "report_classification": create_report_classification_handler(
+                orchestrator,
+                stream_callback=stream_callback,
+                agent_id=agent_id,
+            ),
             "request_detailed_pass": create_request_detailed_pass_handler(world_state, drone_id),
         }
 
@@ -141,3 +145,10 @@ class SurveillanceAgent(BaseAgent):
 
         logger.info("agent1_go_received", coords=self.target_coords, drone=self.drone_id)
         await self.run(initial_message=initial_msg)
+
+        # Emit completed event after the OODA-R loop finishes
+        report = self.orchestrator.agent1_report or {}
+        await self._emit("completed", {
+            "classification": report.get("classification", "unknown"),
+            "confidence": report.get("confidence", 0.0),
+        })
