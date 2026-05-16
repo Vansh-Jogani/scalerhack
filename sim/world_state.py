@@ -90,13 +90,16 @@ class WorldState:
         return drone
 
     def reposition_drone(self, drone_id: str, lat: float, lon: float, alt: float = 0.0) -> bool:
-        """Teleport a drone to a new position without changing its state (IDLE stays IDLE)."""
+        """Teleport a drone to a new position and update its home (for RTL)."""
         if drone_id not in self.drones:
             return False
         drone = self.drones[drone_id]
         drone.lat = lat
         drone.lon = lon
         drone.alt = alt
+        drone.home_lat = lat
+        drone.home_lon = lon
+        drone.home_alt = alt
         return True
 
     def command_drone(self, drone_id: str, lat: float, lon: float, alt: float) -> bool:

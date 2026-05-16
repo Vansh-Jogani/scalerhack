@@ -167,6 +167,15 @@ function App() {
       else if (rawId.startsWith('agent-4')) agent = 'AGENT_4'
       else if (rawId === 'world') agent = 'ORCHESTRATOR'
       else if (rawId.includes('orchestrator')) agent = 'ORCHESTRATOR'
+      if (d.event === 'suppression_active' && d.content?.incident_id) {
+        const sev = d.content.severity || 'medium'
+        const dur = sev === 'low' ? 12000 : sev === 'high' ? 18000 : 15000
+        MapStateManager.startFireSuppression(d.content.incident_id, dur, sev)
+      }
+      if (d.event === 'suppression_drop' && d.content?.lat != null && d.content?.lon != null) {
+        MapStateManager.triggerSuppressionDrop(d.content.lat, d.content.lon)
+      }
+
       const content = typeof d.content === 'string' ? d.content : JSON.stringify(d.content)
       addAgentEntry({
         id: `${Date.now()}-${Math.random()}`,

@@ -1,0 +1,42 @@
+{
+  "name": "hyderabad_multi_incident",
+  "markers": [
+    {
+      "id": "marker-fire-001",
+      "lat": 17.3950,
+      "lon": 78.4967,
+      "type": "fire",
+      "radius_m": 200.0,
+      "severity": "high",
+      "confirmed": true
+    },
+    {
+      "id": "marker-structural-001",
+      "lat": 17.4100,
+      "lon": 78.4800,
+      "type": "structural_collapse",
+      "radius_m": 150.0,
+      "severity": "critical",
+      "confirmed": true
+    },
+    {
+      "id": "marker-industrial-001",
+      "lat": 17.3750,
+      "lon": 78.5100,
+      "type": "industrial_hazard",
+      "radius_m": 300.0,
+      "severity": "high",
+      "confirmed": true
+    },
+    {
+      "id": "marker-flood-001",
+      "lat": 17.4200,
+      "lon": 78.5200,
+      "type": "flood",
+      "radius_m": 400.0,
+      "severity": "medium",
+      "confirmed": true
+    }
+  ],
+  "home_position": {"lat": 17.3850, "lon": 78.4867, "alt": 0.0}
+}

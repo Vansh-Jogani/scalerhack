@@ -5,6 +5,7 @@ calls Claude to produce a structured relief plan with waypoints,
 then commands each drone to its assigned relief position.
 """
 
+import asyncio
 import structlog
 from anthropic import AsyncAnthropic
 
@@ -112,6 +113,7 @@ class ReliefAgent:
         stream_callback=None,
         staging_lat: float | None = None,
         staging_lon: float | None = None,
+        severity: str = "medium",
     ):
         self.agent_id = agent_id
         self.model = model
@@ -123,6 +125,7 @@ class ReliefAgent:
         self.stream_callback = stream_callback
         self.staging_lat = staging_lat
         self.staging_lon = staging_lon
+        self.severity = severity
         self.client = AsyncAnthropic()
 
         self.config = RELIEF_CONFIGS.get(classification, RELIEF_CONFIGS["fire"])
@@ -226,7 +229,71 @@ class ReliefAgent:
 
         await self._emit("findings_reported", relief_plan)
         self.orchestrator.receive_agent4_report(relief_plan)
+
+        asyncio.create_task(self._suppression_sequence(waypoints))
         logger.info("agent4_relief_complete", incident_id=self.incident_id, relief_type=self.config["relief_type"])
+
+    async def _wait_for_arrivals(self, timeout: float = 45.0) -> None:
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout
+        while loop.time() < deadline:
+            states = [
+                (self.world_state.drones[did].get_state() if did in self.world_state.drones else "IDLE")
+                for did in self.drone_ids
+            ]
+            if all(s in ("LOITERING", "IDLE", "RTL") for s in states):
+                return
+            await asyncio.sleep(0.5)
+
+    async def _suppression_sequence(self, waypoints: list) -> None:
+        try:
+            await self._wait_for_arrivals(timeout=45.0)
+            await asyncio.sleep(8)  # scope / position the area before engaging
+
+            is_fire = self.classification == "fire"
+            if is_fire:
+                drop_rounds = {"low": 4, "medium": 5, "high": 6}.get(self.severity, 5)
+                await self._emit("suppression_active", {
+                    "incident_id": self.incident_id,
+                    "drone_ids": self.drone_ids,
+                    "severity": self.severity,
+                })
+                for _ in range(drop_rounds):
+                    await asyncio.sleep(4)
+                    for drone_id in self.drone_ids:
+                        drone_obj = self.world_state.drones.get(drone_id)
+                        spray_lat = drone_obj.lat if drone_obj else None
+                        spray_lon = drone_obj.lon if drone_obj else None
+                        if spray_lat is None and waypoints:
+                            spray_lat = waypoints[0]["lat"]
+                            spray_lon = waypoints[0]["lon"]
+                        if spray_lat is None:
+                            continue
+                        await self._emit("suppression_drop", {
+                            "drone_id": drone_id,
+                            "lat": spray_lat,
+                            "lon": spray_lon,
+                            "incident_id": self.incident_id,
+                        })
+                await asyncio.sleep(12)  # post-suppression loiter / assessment
+                await self._emit("suppression_complete", {
+                    "incident_id": self.incident_id,
+                    "severity": self.severity,
+                })
+            else:
+                loiter_secs = {"structural_collapse": 30, "flood": 20, "industrial_hazard": 25, "maritime_sar": 20}
+                await asyncio.sleep(loiter_secs.get(self.classification, 20))
+
+            for drone_id in self.drone_ids:
+                drone = self.world_state.drones.get(drone_id)
+                if drone and drone.get_state() not in ("IDLE", "RTL"):
+                    drone.return_to_launch()
+        except Exception as e:
+            logger.error("agent4_suppression_error", error=str(e), incident_id=self.incident_id)
+            for drone_id in self.drone_ids:
+                drone = self.world_state.drones.get(drone_id)
+                if drone and drone.get_state() not in ("IDLE", "RTL"):
+                    drone.return_to_launch()
 
     async def _fallback_plan(self, center_lat: float, center_lon: float, alt: float) -> None:
         """Fallback when LLM fails — command drones to centroid and report minimal plan."""
@@ -243,3 +310,4 @@ class ReliefAgent:
         }
         await self._emit("findings_reported", plan)
         self.orchestrator.receive_agent4_report(plan)
+        asyncio.create_task(self._suppression_sequence([{"lat": center_lat, "lon": center_lon}]))

@@ -194,6 +194,61 @@ class _MapStateManager {
     this._survivorMarkers[id] = marker
   }
 
+  startFireSuppression(incident_id, duration_ms = 15000, severity = 'medium') {
+    const circles = this._riskLayers[incident_id]
+    if (!circles || circles.length === 0) return
+    const startRadii = circles.map((c) => c.getRadius())
+    const startOpacities = [0.25, 0.12, 0.06]
+
+    // low = fully extinguished; medium = 25% residual; high = 45% residual + color shift to amber
+    const residualFactor = severity === 'low' ? 0 : severity === 'high' ? 0.45 : 0.25
+    const containedColor = severity === 'high' ? '#FFB800' : null
+
+    const startTime = performance.now()
+    const animate = () => {
+      const t = Math.min((performance.now() - startTime) / duration_ms, 1)
+      const scale = 1 - t * (1 - residualFactor)
+      circles.forEach((circle, i) => {
+        circle.setRadius(startRadii[i] * scale)
+        circle.setStyle({ fillOpacity: startOpacities[i] * Math.max(scale, 0) })
+      })
+      if (t < 1) {
+        requestAnimationFrame(animate)
+      } else if (residualFactor === 0) {
+        // fully extinguished — remove circles entirely
+        circles.forEach((c) => this._map && this._map.removeLayer(c))
+        delete this._riskLayers[incident_id]
+      } else if (containedColor) {
+        // high severity — recolor to amber to signal "contained not out"
+        circles.forEach((c) => c.setStyle({ fillColor: containedColor, color: containedColor }))
+      }
+    }
+    requestAnimationFrame(animate)
+  }
+
+  triggerSuppressionDrop(lat, lon) {
+    if (!this._map) return
+    const rings = [
+      { maxRadius: 180, duration: 2000, color: '#88CCFF', opacity: 0.7, fillOpacity: 0.35 },
+      { maxRadius: 90,  duration: 1400, color: '#AADDFF', opacity: 0.5, fillOpacity: 0.2  },
+    ]
+    rings.forEach(({ maxRadius, duration, color, opacity, fillOpacity }) => {
+      const drop = L.circle([lat, lon], {
+        radius: 0, color, fillColor: color,
+        weight: 2, opacity, fillOpacity,
+      }).addTo(this._map)
+      const start = performance.now()
+      const animate = (now) => {
+        const t = Math.min((now - start) / duration, 1)
+        drop.setRadius(t * maxRadius)
+        drop.setStyle({ opacity: opacity * (1 - t), fillOpacity: fillOpacity * (1 - t) })
+        if (t < 1) requestAnimationFrame(animate)
+        else this._map.removeLayer(drop)
+      }
+      requestAnimationFrame(animate)
+    })
+  }
+
   getActiveIncidentColor() {
     const ids = Object.keys(this._incidentMeta)
     if (ids.length === 0) return '#00FF88'

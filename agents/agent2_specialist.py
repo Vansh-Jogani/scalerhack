@@ -237,6 +237,11 @@ class SpecialistAgent:
             self._survey_zone(drone_id, points) for drone_id, points in assignments.items()
         ])
 
+        for drone_id in self.drone_ids:
+            drone = self.world_state.drones.get(drone_id)
+            if drone and drone.get_state() not in ("IDLE", "RTL"):
+                drone.return_to_launch()
+
         all_readings = [r for did in self.drone_ids for r in self._readings.get(did, [])]
         await self._emit("survey_complete", {"total_readings": len(all_readings)})
         await self._report_via_llm(agent1_report, all_readings)

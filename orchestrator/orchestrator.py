@@ -98,6 +98,7 @@ class ARIAOrchestrator:
             "disaster_type": disaster_type,
             "incident_id": incident_id,
             "dispatch_from": payload.get("dispatch_from"),
+            "severity": payload.get("severity", "medium"),
         }
         self.agent1_report = None
         self.agent2_report = None
@@ -310,6 +311,7 @@ class ARIAOrchestrator:
             stream_callback=self.event_callback,
             staging_lat=(self.active_incident or {}).get("dispatch_from", {}).get("lat"),
             staging_lon=(self.active_incident or {}).get("dispatch_from", {}).get("lon"),
+            severity=(self.active_incident or {}).get("severity", "medium"),
         )
         await self._emit("agent_stream", {
             "agent_id": "agent-4", "event": "started",
@@ -458,6 +460,7 @@ class ARIAOrchestrator:
                 stream_callback=self.event_callback,
                 staging_lat=(self.active_incident or {}).get("dispatch_from", {}).get("lat"),
                 staging_lon=(self.active_incident or {}).get("dispatch_from", {}).get("lon"),
+                severity=(self.active_incident or {}).get("severity", "medium"),
             )
             await self._emit("agent_stream", {"agent_id": "agent-4", "event": "started", "content": f"Relief coordination — {classification}"})
             await agent4.run(self.agent2_report or {})

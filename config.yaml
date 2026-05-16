@@ -7,7 +7,7 @@ mapbox:
 
 simulation:
   tick_rate_hz: 10
-  scenario: "sim/scenarios/fire.json"
+  scenario: "sim/scenarios/hyderabad_multi.json"
 
 models:
   agent1: "claude-haiku-4-5-20251001"

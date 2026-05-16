@@ -6,17 +6,17 @@ const LERP_MS = 500
 // ── Drone type config ────────────────────────────────────────────────────────
 
 const DRONE_VISUAL = {
-  fixed_wing:   { color: '#00CFFF', size: 38, anchor: [19, 19] },
-  rotary:       { color: '#00FF88', size: 28, anchor: [14, 14] },
-  micro_rotary: { color: '#FFB800', size: 20, anchor: [10, 10] },
+  fixed_wing:   { color: '#00CFFF', size: 22, anchor: [11, 11] },
+  rotary:       { color: '#00FF88', size: 16, anchor: [8, 8] },
+  micro_rotary: { color: '#FFB800', size: 12, anchor: [6, 6] },
 }
 
 // ── SVG shapes ───────────────────────────────────────────────────────────────
 
 // Fixed-wing: solid filled arrow pointing up — large, dominant
 function fixedWingSVG(color) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 38 38" width="38" height="38">
-    <g style="filter:drop-shadow(0 0 6px ${color})">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 38 38" width="22" height="22">
+    <g style="filter:drop-shadow(0 0 4px ${color})">
       <polygon points="19,2 36,34 19,27 2,34" fill="${color}" opacity="0.9"/>
       <polygon points="19,2 36,34 19,27 2,34" fill="none" stroke="white" stroke-width="1" opacity="0.6"/>
       <line x1="19" y1="27" x2="19" y2="2" stroke="white" stroke-width="0.8" opacity="0.4"/>
@@ -26,8 +26,8 @@ function fixedWingSVG(color) {
 
 // Rotary: diamond body + 4 radiating arms — medium, cross-shaped
 function rotarySVG(color) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="28" height="28">
-    <g style="filter:drop-shadow(0 0 4px ${color})">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="16" height="16">
+    <g style="filter:drop-shadow(0 0 3px ${color})">
       <line x1="14" y1="14" x2="4" y2="4" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
       <line x1="14" y1="14" x2="24" y2="4" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
       <line x1="14" y1="14" x2="4" y2="24" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
@@ -40,8 +40,8 @@ function rotarySVG(color) {
 
 // Micro-rotary: circle with crosshairs — small, precision symbol
 function microRotarySVG(color) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="20" height="20">
-    <g style="filter:drop-shadow(0 0 3px ${color})">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="12" height="12">
+    <g style="filter:drop-shadow(0 0 2px ${color})">
       <circle cx="10" cy="10" r="7" fill="${color}" opacity="0.2" stroke="${color}" stroke-width="1.5"/>
       <circle cx="10" cy="10" r="2.5" fill="${color}"/>
       <line x1="10" y1="1" x2="10" y2="7" stroke="${color}" stroke-width="1.5" stroke-linecap="round"/>
