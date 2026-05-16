@@ -6,6 +6,8 @@ Per SPEC.md SHARED_TO_SIMULATION.drone_commands
 
 import time
 
+import math
+
 FLY_TO_TOOL = {
     "name": "fly_to",
     "description": "Command a drone to fly to specified coordinates. The drone will begin moving toward the target at its cruise speed.",
@@ -21,45 +23,45 @@ FLY_TO_TOOL = {
     },
 }
 
-LOITER_OVER_TOOL = {
-    "name": "loiter_over",
-    "description": "Command a drone to loiter (circle) over a position at a given radius for a specified duration.",
+FIND_NEAREST_BASE_TOOL = {
+    "name": "find_nearest_base",
+    "description": "Find the nearest deployment base that stocks the required drone type for your swarm. Returns base coordinates to launch from.",
     "input_schema": {
         "type": "object",
         "properties": {
-            "drone_id": {"type": "string", "description": "ID of the drone to command"},
-            "lat": {"type": "number", "description": "Center latitude of loiter pattern"},
-            "lon": {"type": "number", "description": "Center longitude of loiter pattern"},
-            "radius": {"type": "number", "description": "Loiter radius in meters"},
-            "duration": {"type": "number", "description": "Loiter duration in seconds"},
+            "swarm_type": {
+                "type": "string",
+                "enum": ["fixed_wing", "rotary", "micro_rotary"],
+                "description": "Drone type required for this swarm mission",
+            },
+            "incident_lat": {"type": "number", "description": "Incident latitude (for distance calculation)"},
+            "incident_lon": {"type": "number", "description": "Incident longitude (for distance calculation)"},
         },
-        "required": ["drone_id", "lat", "lon", "radius", "duration"],
+        "required": ["swarm_type", "incident_lat", "incident_lon"],
     },
 }
 
-RTL_TOOL = {
-    "name": "rtl",
-    "description": "Command a drone to return to launch position immediately.",
+LAUNCH_FROM_BASE_TOOL = {
+    "name": "launch_from_base",
+    "description": "Spawn a swarm drone at a specific deployment base. The drone will appear at the base coordinates ready to fly.",
     "input_schema": {
         "type": "object",
         "properties": {
-            "drone_id": {"type": "string", "description": "ID of the drone to return"},
+            "base_id": {"type": "string", "description": "Base ID returned by find_nearest_base"},
+            "drone_id": {"type": "string", "description": "ID to assign to this drone"},
+            "drone_type": {"type": "string", "enum": ["fixed_wing", "rotary", "micro_rotary"]},
         },
-        "required": ["drone_id"],
+        "required": ["base_id", "drone_id", "drone_type"],
     },
 }
 
-ABORT_TOOL = {
-    "name": "abort",
-    "description": "Immediately stop a drone — highest priority command. Use only in emergencies.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "drone_id": {"type": "string", "description": "ID of the drone to abort"},
-        },
-        "required": ["drone_id"],
-    },
-}
+
+def _haversine(lat1, lon1, lat2, lon2):
+    R = 6_371_000.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 def create_fly_to_handler(world_state):
@@ -79,59 +81,29 @@ def create_fly_to_handler(world_state):
     return fly_to
 
 
-def create_loiter_over_handler(world_state):
-    """Create loiter_over tool handler bound to a WorldState instance."""
-    async def loiter_over(drone_id: str, lat: float, lon: float, radius: float, duration: float) -> dict:
-        drone = world_state.drones.get(drone_id)
-        if drone is None:
-            return {"status": "error", "message": f"Drone {drone_id} not found"}
-
-        # Command drone to the loiter center first
-        world_state.command_drone(drone_id, lat, lon, drone.alt)
-        # Set loiter parameters on the drone
-        drone.loiter_radius = radius
-        drone.loiter_duration = duration
-        loiter_start = time.time()
-
+def create_find_nearest_base_handler(world_state):
+    async def find_nearest_base(swarm_type: str, incident_lat: float, incident_lon: float) -> dict:
+        candidates = [b for b in world_state.get_bases() if swarm_type in b["stocked_drone_types"]]
+        if not candidates:
+            candidates = world_state.get_bases()
+        best = min(candidates, key=lambda b: _haversine(incident_lat, incident_lon, b["lat"], b["lon"]))
+        dist_m = _haversine(incident_lat, incident_lon, best["lat"], best["lon"])
         return {
             "status": "ok",
-            "drone_id": drone_id,
-            "loiter_start": loiter_start,
-            "expected_end": loiter_start + duration,
-            "message": f"Drone {drone_id} loitering over ({lat}, {lon}) r={radius}m for {duration}s",
+            "base_id": best["id"],
+            "name": best["name"],
+            "lat": best["lat"],
+            "lon": best["lon"],
+            "distance_m": round(dist_m),
         }
-    return loiter_over
+    return find_nearest_base
 
 
-def create_rtl_handler(world_state):
-    """Create rtl (return to launch) tool handler bound to a WorldState instance."""
-    async def rtl(drone_id: str) -> dict:
-        drone = world_state.drones.get(drone_id)
-        if drone is None:
-            return {"status": "error", "message": f"Drone {drone_id} not found"}
-        drone.return_to_launch()
-        return {
-            "status": "ok",
-            "drone_id": drone_id,
-            "message": f"Drone {drone_id} returning to launch",
-        }
-    return rtl
-
-
-def create_abort_handler(world_state):
-    """Create abort tool handler bound to a WorldState instance."""
-    async def abort(drone_id: str) -> dict:
-        drone = world_state.drones.get(drone_id)
-        if drone is None:
-            return {"status": "error", "message": f"Drone {drone_id} not found"}
-        # Immediate stop — clear target, set state to IDLE
-        drone.target_lat = None
-        drone.target_lon = None
-        drone.target_alt = None
-        drone.state = "IDLE"
-        return {
-            "status": "ok",
-            "drone_id": drone_id,
-            "message": f"Drone {drone_id} ABORTED — immediate stop",
-        }
-    return abort
+def create_launch_from_base_handler(world_state):
+    async def launch_from_base(base_id: str, drone_id: str, drone_type: str) -> dict:
+        base = next((b for b in world_state.get_bases() if b["id"] == base_id), None)
+        if not base:
+            return {"status": "error", "message": f"Base {base_id} not found"}
+        world_state.add_drone(drone_id, drone_type, base["lat"], base["lon"])
+        return {"status": "ok", "drone_id": drone_id, "lat": base["lat"], "lon": base["lon"], "base": base["name"]}
+    return launch_from_base

@@ -1,22 +1,24 @@
 {
   "name": "single_fire_test",
-  "center": {"lat": 17.3950, "lon": 78.4967},
+  "center": {"lat": 17.3870, "lon": 78.4890},
   "markers": [
     {
       "id": "marker-001",
-      "lat": 17.3950,
-      "lon": 78.4967,
+      "lat": 17.3880,
+      "lon": 78.4895,
       "type": "fire",
-      "radius_m": 200.0,
+      "type_hint": "possible fire",
+      "ground_truth_type": "industrial_hazard",
+      "radius_m": 300.0,
       "severity": "high",
       "confirmed": true
     }
   ],
   "boundary_polygon": [
-    [17.3930, 78.4947],
-    [17.3930, 78.4987],
-    [17.3970, 78.4987],
-    [17.3970, 78.4947]
+    [17.3860, 78.4875],
+    [17.3860, 78.4915],
+    [17.3900, 78.4915],
+    [17.3900, 78.4875]
   ],
   "home_position": {"lat": 17.3850, "lon": 78.4867, "alt": 0.0}
 }

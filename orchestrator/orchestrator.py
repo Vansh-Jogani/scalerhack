@@ -131,10 +131,9 @@ class ARIAOrchestrator:
         if self.sensor_overlay:
             center = area["center"]
             radius_m = area.get("radius_m", 600.0)
-            actual_type = self._resolve_actual_disaster_type(center, disaster_type)
-            self.sensor_overlay.set_incident(
-                center["lat"], center["lon"], radius_m, actual_type
-            )
+            # Use ground_truth_type from the nearest marker (hidden from agents)
+            ground_truth = self._lookup_ground_truth(center["lat"], center["lon"], disaster_type)
+            self.sensor_overlay.set_incident(center["lat"], center["lon"], radius_m, ground_truth)
 
         # Reposition drone-001 to the nearest response centre before launch
         dispatch_from = payload.get("dispatch_from")
@@ -153,6 +152,7 @@ class ARIAOrchestrator:
             "action": "go",
             "coordinates": area["center"],
             "incident_id": incident_id,
+            "type_hint": disaster_type,  # operator's guess — agent may revise
         }
         logger.info("go_signal_processed", state=self.state, disaster_type=disaster_type, incident_id=incident_id)
 
@@ -235,7 +235,10 @@ class ARIAOrchestrator:
             drone_id="drone-001",
             stream_callback=self.event_callback,
         )
-        await self._emit("agent_stream", {"agent_id": "agent-1", "event": "started", "content": state["go_payload"]})
+        coords = state["go_payload"].get("coordinates", {})
+        hint = state["go_payload"].get("type_hint", "unknown")
+        await self._emit("agent_stream", {"agent_id": "orchestrator", "event": "pipeline_start", "content": f"LangGraph: START → surveillance · incident {state['incident_id']}"})
+        await self._emit("agent_stream", {"agent_id": "agent-1", "event": "dispatched", "content": f"Fixed-wing en route · target ({coords.get('lat',0):.4f}, {coords.get('lon',0):.4f}) · operator hint: {hint}"})
         asyncio.create_task(agent1.receive_go(state["go_payload"]))
         self.state = "SURVEILLANCE_ACTIVE"
 
@@ -285,10 +288,10 @@ class ARIAOrchestrator:
             staging_lat=(self.active_incident or {}).get("dispatch_from", {}).get("lat"),
             staging_lon=(self.active_incident or {}).get("dispatch_from", {}).get("lon"),
         )
-        await self._emit("agent_stream", {
-            "agent_id": "agent-2", "event": "started",
-            "content": f"Deploying {classification} swarm",
-        })
+        swarm_cfg = __import__('agents.agent2_specialist', fromlist=['SWARM_CAPABILITIES']).SWARM_CAPABILITIES.get(classification, {})
+        await self._emit("agent_stream", {"agent_id": "orchestrator", "event": "node_transition", "content": f"LangGraph: surveillance → swarm · A1 classified {classification}"})
+        await self._emit("agent_stream", {"agent_id": "agent-2", "event": "dispatched", "content": f"Swarm selected: {swarm_cfg.get('swarm','?')} · {swarm_cfg.get('drones','?')} drones · alt {swarm_cfg.get('altitude','?')}m · constraint: {swarm_cfg.get('constraint','none')}"})
+        await self._emit("agent_stream", {"agent_id": "agent-2", "event": "tools_loaded", "content": f"Tools: fly_to, find_nearest_base, launch_from_base, get_sensor_reading, report_findings"})
         asyncio.create_task(agent2.run(a1_report))
         self.state = "SWARM_ACTIVE"
 
@@ -353,28 +356,32 @@ class ARIAOrchestrator:
         )
         self.latest_briefing = briefing
 
+        await self._emit("agent_stream", {"agent_id": "orchestrator", "event": "node_transition", "content": "LangGraph: swarm → advisory · all field data compiled"})
         agent3 = AdvisoryAgent(model=self.model_a3, orchestrator=self)
-        await self._emit("agent_stream", {"agent_id": "agent-3", "event": "started", "content": "Generating advisory"})
+        await self._emit("agent_stream", {"agent_id": "agent-3", "event": "briefing_received", "content": f"Incident {state['incident_id']} · A1 + A2 data ingested · generating response plan"})
         advisory = await agent3.on_trigger(briefing)
         await self._emit("advisory", advisory)
-        await self._emit("agent_stream", {
-            "agent_id": "agent-3", "event": "advisory_issued",
-            "content": advisory.get("situation_summary", ""),
-        })
+        situation = advisory.get("situation_summary", "")
+        actions = len(advisory.get("immediate_actions", []))
+        flags = len(advisory.get("risk_flags", []))
+        await self._emit("agent_stream", {"agent_id": "agent-3", "event": "advisory_issued", "content": f"Advisory issued · {actions} immediate actions · {flags} risk flags · {situation[:80]}…" if len(situation) > 80 else f"Advisory issued · {actions} immediate actions · {flags} risk flags"})
+        await self._emit("agent_stream", {"agent_id": "orchestrator", "event": "pipeline_complete", "content": f"LangGraph: advisory → END · mission pipeline complete"})
         return {"advisory": advisory}
 
     # ── EventBus integration ──────────────────────────────────────────────────
 
     async def _subscribe_and_publish_a1(self, report: dict) -> None:
+        # Do NOT subscribe to agent_1_report_received — that fires Agent 3 before
+        # Agent 2 runs, violating the LangGraph sequential pipeline.
+        # Agent 3 initial advisory is handled exclusively by _advisory_node.
+        # EventBus only handles post-advisory updates (A2 new findings, world events).
         for trigger in [
-            "agent_1_report_received",
             "agent_2_findings_updated",
             "world_event_fired",
             "operator_query",
             "heartbeat_check",
         ]:
             self.event_bus.subscribe(trigger, self._handle_agent3_trigger)
-        await self.event_bus.publish("agent_1_report_received", report)
         self.event_bus.start_heartbeat(
             lambda p: asyncio.ensure_future(self.event_bus.publish("heartbeat_check", p))
         )
@@ -552,6 +559,20 @@ class ARIAOrchestrator:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _lookup_ground_truth(self, lat: float, lon: float, fallback: str) -> str:
+        """Find ground_truth_type from the nearest world_state marker."""
+        import math
+        def _dist(m):
+            dlat = math.radians(m.lat - lat)
+            dlon = math.radians(m.lon - lon)
+            a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat)) * math.cos(math.radians(m.lat)) * math.sin(dlon / 2) ** 2
+            return 6_371_000.0 * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        markers = self.world_state.markers if self.world_state else []
+        if not markers:
+            return fallback
+        nearest = min(markers, key=_dist)
+        return nearest.ground_truth_type or nearest.type
 
     async def _emit(self, event_type: str, data: dict) -> None:
         """Emit event to WebSocket broadcast callback."""

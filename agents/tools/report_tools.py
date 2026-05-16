@@ -26,25 +26,43 @@ REPORT_CLASSIFICATION_TOOL = {
                 "description": "Classified disaster type",
             },
             "confidence": {"type": "number", "description": "Classification confidence 0.0-1.0"},
-            "affected_area_m2": {"type": "number", "description": "Estimated affected area in square meters"},
-            "recommended_drone_count": {"type": "integer", "description": "Number of specialist drones recommended based on sensor analysis"},
+            "area": {
+                "type": "object",
+                "properties": {
+                    "center": {
+                        "type": "object",
+                        "properties": {
+                            "lat": {"type": "number"},
+                            "lon": {"type": "number"},
+                        },
+                        "required": ["lat", "lon"],
+                    },
+                    "radius_m": {"type": "number"},
+                },
+                "required": ["center", "radius_m"],
+            },
+            "sensor_summary": {
+                "type": "object",
+                "properties": {
+                    "thermal_detected": {"type": "boolean"},
+                    "survivor_probability": {"type": "number"},
+                    "hazard_flags": {"type": "array", "items": {"type": "string"}},
+                    "wind_speed": {"type": "number"},
+                    "visibility_m": {"type": "number"},
+                },
+                "required": ["thermal_detected", "survivor_probability", "hazard_flags", "wind_speed", "visibility_m"],
+            },
+            "confirmed_hint": {
+                "type": "boolean",
+                "description": "True if your sensor classification matches the operator's type_hint. False if you revised it.",
+            },
+            "recommended_swarm": {
+                "type": "string",
+                "description": "Not used by Agent 1 — leave empty, orchestrator selects",
+            },
             "notes": {"type": "string", "description": "Additional observations"},
         },
-        "required": ["incident_type", "confidence", "affected_area_m2", "recommended_drone_count", "notes"],
-    },
-}
-
-REQUEST_DETAILED_PASS_TOOL = {
-    "name": "request_detailed_pass",
-    "description": "Request another orbit at lower altitude for detailed inspection. Minimum altitude is 60m AGL.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "zone_lat": {"type": "number", "description": "Center latitude of the zone to inspect"},
-            "zone_lon": {"type": "number", "description": "Center longitude of the zone to inspect"},
-            "pass_altitude": {"type": "number", "description": "Altitude for the detailed pass in meters AGL (minimum 60m)"},
-        },
-        "required": ["zone_lat", "zone_lon", "pass_altitude"],
+        "required": ["incident_id", "classification", "confidence", "area", "sensor_summary", "confirmed_hint", "notes"],
     },
 }
 

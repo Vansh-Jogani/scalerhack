@@ -14,20 +14,20 @@ logger = structlog.get_logger()
 
 
 FIXED_WING_DEFAULTS = {
-    "cruise_speed": 180.0,   # m/s (10x for demo)
+    "cruise_speed": 30.0,   # m/s — fast recon
     "cruise_alt": 120.0,    # m AGL
     "loiter_radius": 80.0,  # m
     "turn_radius": 45.0,    # m
 }
 
 ROTARY_DEFAULTS = {
-    "cruise_speed": 80.0,   # m/s (10x for demo)
+    "cruise_speed": 18.0,   # m/s — fast transit for demo
     "hover_alt": 30.0,
     "loiter_time": 30.0,
 }
 
 MICRO_ROTARY_DEFAULTS = {
-    "cruise_speed": 40.0,   # m/s (10x for demo)
+    "cruise_speed": 10.0,   # m/s
     "hover_alt": 10.0,
     "loiter_time": 60.0,
 }
