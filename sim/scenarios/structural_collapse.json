@@ -1,25 +1,28 @@
 {
   "name": "structural_collapse_test",
+  "center": {"lat": 17.3790, "lon": 78.5080},
   "markers": [
     {
       "id": "marker-sc-001",
-      "lat": 34.052,
-      "lon": -118.260,
+      "lat": 17.3790,
+      "lon": 78.5080,
       "type": "structural_collapse",
+      "type_hint": "possible structural collapse",
+      "ground_truth_type": "structural_collapse",
       "radius_m": 100.0,
       "severity": "critical",
       "confirmed": true
     }
   ],
   "home_position": {
-    "lat": 34.045,
-    "lon": -118.270,
+    "lat": 17.3730,
+    "lon": 78.5140,
     "alt": 0.0
   },
   "boundary_polygon": [
-    [34.051, -118.261],
-    [34.053, -118.261],
-    [34.053, -118.259],
-    [34.051, -118.259]
+    [17.3781, 78.5071],
+    [17.3799, 78.5071],
+    [17.3799, 78.5089],
+    [17.3781, 78.5089]
   ]
 }

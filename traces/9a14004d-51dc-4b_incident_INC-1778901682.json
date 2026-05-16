@@ -1,0 +1,57 @@
+{
+  "trace_id": "9a14004d-51dc-4b",
+  "name": "incident_INC-1778901682",
+  "start_time": "2026-05-16T03:21:22.703643+00:00",
+  "spans": [
+    {
+      "span_id": "831bde3c-e97",
+      "parent_id": null,
+      "trace_id": "9a14004d-51dc-4b",
+      "name": "transition:STANDBY\u2192SURVEILLANCE_ACTIVE",
+      "type": "orchestrator",
+      "start_time": "2026-05-16T03:21:22.703643+00:00",
+      "end_time": "2026-05-16T03:21:22.703643+00:00",
+      "duration_ms": 0,
+      "status": "ok",
+      "metadata": {},
+      "events": []
+    },
+    {
+      "span_id": "e06ef7c5-d57",
+      "parent_id": null,
+      "trace_id": "9a14004d-51dc-4b",
+      "name": "agent1_surveillance_invocation",
+      "type": "agent",
+      "start_time": "2026-05-16T03:21:24.259232+00:00",
+      "end_time": "2026-05-16T03:26:24.929001+00:00",
+      "duration_ms": 300670,
+      "status": "timeout",
+      "metadata": {
+        "model": "claude-haiku-4-5-20251001"
+      },
+      "events": []
+    },
+    {
+      "span_id": "625f3521-b0d",
+      "parent_id": null,
+      "trace_id": "9a14004d-51dc-4b",
+      "name": "agent3_advisory_invocation",
+      "type": "agent",
+      "start_time": "2026-05-16T03:26:24.963008+00:00",
+      "end_time": "2026-05-16T03:26:29.415935+00:00",
+      "duration_ms": 4453,
+      "status": "ok",
+      "metadata": {},
+      "events": [
+        {
+          "name": "advisory_generated",
+          "timestamp": "2026-05-16T03:26:29.415935+00:00",
+          "data": {
+            "actions": 5
+          }
+        }
+      ]
+    }
+  ],
+  "span_count": 3
+}

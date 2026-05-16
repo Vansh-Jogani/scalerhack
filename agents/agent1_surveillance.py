@@ -12,6 +12,8 @@ from anthropic import AsyncAnthropic
 from agents.tools.flight_tools import FLY_TO_TOOL, create_fly_to_handler
 from agents.tools.sensor_tools import GET_SENSOR_READING_TOOL, create_get_sensor_reading_handler
 from agents.tools.report_tools import REPORT_CLASSIFICATION_TOOL, create_report_classification_handler
+from agents.tools.web_search_tools import WEB_SEARCH_WEATHER_TOOL, create_get_live_weather_handler
+from agents.resilience import retry_api_call
 from prompts.registry import load_prompt
 
 logger = structlog.get_logger()
@@ -75,17 +77,19 @@ class SurveillanceAgent:
         self._system_prompt = prompt_data["text"]
         self._prompt_version_hash = prompt_data["version_hash"]
 
-        self.tools = [FLY_TO_TOOL, GET_SENSOR_READING_TOOL, REPORT_CLASSIFICATION_TOOL]
+        self.tools = [FLY_TO_TOOL, GET_SENSOR_READING_TOOL, REPORT_CLASSIFICATION_TOOL, WEB_SEARCH_WEATHER_TOOL]
         self._tool_handlers = {
             "fly_to": create_fly_to_handler(world_state),
             "get_sensor_reading": create_get_sensor_reading_handler(sensor_overlay, world_state),
             "report_classification": create_report_classification_handler(orchestrator),
+            "get_live_weather": create_get_live_weather_handler(),
         }
 
         self.target_coords = None
         self.type_hint = "unknown"
         self.classification_reported = False
         self.sensor_readings = []
+        self.weather_data = None
 
     async def _emit(self, event: str, content) -> None:
         if self.stream_callback:
@@ -112,6 +116,20 @@ class SurveillanceAgent:
         center_lat = self.target_coords["lat"]
         center_lon = self.target_coords["lon"]
         cruise_alt = 120.0
+
+        # Fetch live weather before survey
+        await self._emit("web_search", f"Fetching live weather for ({center_lat:.4f}, {center_lon:.4f}) via Open-Meteo API")
+        weather_result = await self._tool_handlers["get_live_weather"](lat=center_lat, lon=center_lon)
+        if weather_result.get("status") == "ok":
+            wd = weather_result["data"]
+            self.weather_data = wd
+            await self._emit("weather_received",
+                f"LIVE WEATHER: {wd['description']} · {wd['temperature_c']}°C · "
+                f"wind {wd['wind_speed_ms']}m/s from {wd['wind_direction_deg']}° · "
+                f"humidity {wd['humidity_pct']}%"
+            )
+        else:
+            await self._emit("weather_unavailable", "Weather API unreachable — proceeding without live data")
 
         await self._emit("nav", f"fly_to({center_lat:.4f}, {center_lon:.4f}, alt={cruise_alt:.0f}m) — transit to incident zone")
         await self._tool_handlers["fly_to"](
@@ -165,6 +183,7 @@ class SurveillanceAgent:
             "confirmed_radius_m": radius,
             "operator_type_hint": self.type_hint,
             "sensor_readings": sensor_data,
+            "live_weather": self.weather_data,
         }
         messages = [
             {
@@ -176,14 +195,22 @@ class SurveillanceAgent:
             }
         ]
 
-        response = await self.client.messages.create(
-            model=self.model,
-            max_tokens=1024,
-            system=self._system_prompt,
-            messages=messages,
-            tools=self.tools,
-            tool_choice={"type": "tool", "name": "report_classification"},
-        )
+        async def _call_api():
+            return await self.client.messages.create(
+                model=self.model,
+                max_tokens=1024,
+                system=self._system_prompt,
+                messages=messages,
+                tools=self.tools,
+                tool_choice={"type": "tool", "name": "report_classification"},
+            )
+
+        try:
+            response = await retry_api_call(_call_api, max_retries=3, context="agent1_classify")
+        except Exception as e:
+            logger.error("agent1_classify_failed", error=str(e))
+            await self._emit("error", f"Classification failed after retries: {e}")
+            return
 
         for block in response.content:
             if block.type == "tool_use" and block.name == "report_classification":

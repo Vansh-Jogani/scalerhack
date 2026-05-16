@@ -1,25 +1,28 @@
 {
   "name": "flood_test",
+  "center": {"lat": 17.3720, "lon": 78.4780},
   "markers": [
     {
       "id": "marker-fl-001",
-      "lat": 34.075,
-      "lon": -118.195,
+      "lat": 17.3720,
+      "lon": 78.4780,
       "type": "flood",
+      "type_hint": "possible flooding",
+      "ground_truth_type": "flood",
       "radius_m": 500.0,
       "severity": "high",
       "confirmed": true
     }
   ],
   "home_position": {
-    "lat": 34.065,
-    "lon": -118.205,
+    "lat": 17.3650,
+    "lon": 78.4720,
     "alt": 0.0
   },
   "boundary_polygon": [
-    [34.070, -118.200],
-    [34.080, -118.200],
-    [34.080, -118.190],
-    [34.070, -118.190]
+    [17.3675, 78.4735],
+    [17.3765, 78.4735],
+    [17.3765, 78.4825],
+    [17.3675, 78.4825]
   ]
 }

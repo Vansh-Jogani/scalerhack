@@ -13,6 +13,7 @@ const ACCENTS = {
 
 const A1_COLOR = '#9C8AFF'
 const A3_COLOR = '#5ee08b'
+const A4_COLOR = '#FF9F43'
 const SEV_LABELS = ['LOW', 'MED', 'HIGH', 'CRIT']
 const SEV_COLORS = ['#6EE7B7', '#FCD34D', '#F97316', '#EF4444']
 const DISASTER_KEYS = Object.keys(ACCENTS)
@@ -131,16 +132,17 @@ function InlineStat({ label, val, color = '#F4F7FB' }) {
 function AgentCard({ agentStates, accent }) {
   const c = accent.hex
   const agents = [
-    { num: 'A1', name: 'Surveillance',  color: A1_COLOR, key: 'A1', stateMap: { idle: 'STANDBY', active: 'SCANNING', done: 'LOITERING', error: 'ERROR' } },
-    { num: 'A2', name: 'Specialist Swarm', color: c,     key: 'A2', stateMap: { idle: 'STANDBY', active: 'DEPLOYED', done: 'COMPLETE', error: 'ERROR' } },
-    { num: 'A3', name: 'Advisory',      color: A3_COLOR, key: 'A3', stateMap: { idle: 'STANDBY', active: 'GENERATING', done: 'ISSUED', error: 'ERROR' } },
+    { num: 'A1', name: 'Surveillance',     color: A1_COLOR, key: 'A1', stateMap: { idle: 'STANDBY', active: 'SCANNING',   done: 'LOITERING', error: 'ERROR' } },
+    { num: 'A2', name: 'Specialist Swarm', color: c,        key: 'A2', stateMap: { idle: 'STANDBY', active: 'DEPLOYED',   done: 'COMPLETE',  error: 'ERROR' } },
+    { num: 'A3', name: 'Advisory',         color: A3_COLOR, key: 'A3', stateMap: { idle: 'STANDBY', active: 'GENERATING', done: 'ISSUED',    error: 'ERROR' } },
+    { num: 'A4', name: 'Relief',           color: A4_COLOR, key: 'A4', stateMap: { idle: 'STANDBY', active: 'LOCATING',   done: 'DISPATCHED',error: 'ERROR' } },
   ]
   return (
     <Glass radius={20} style={{ flexShrink: 0 }}>
       <div style={{ padding: '14px 18px 14px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
           <Lbl>Agents</Lbl>
-          <Mn color="rgba(232,237,245,0.4)" size={9}>LANGGRAPH · 3 NODES</Mn>
+          <Mn color="rgba(232,237,245,0.4)" size={9}>LANGGRAPH · 4 NODES</Mn>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {agents.map((a) => {
@@ -171,19 +173,21 @@ function AgentCard({ agentStates, accent }) {
 }
 
 // ── Stream feed (active) ──────────────────────────────────────────────────────
-function StreamCard({ feedEntries, accent, advisory }) {
+function StreamCard({ feedEntries, accent, advisory, reliefPlan }) {
   const c = accent.hex
   const [tab, setTab] = useState('feed')
   useEffect(() => { if (advisory) setTab('advisory') }, [advisory])
-  const agentColors = { A1: A1_COLOR, A2: c, A3: A3_COLOR, SYS: 'rgba(232,237,245,0.42)' }
+  useEffect(() => { if (reliefPlan) setTab('relief') }, [reliefPlan])
+  const agentColors = { A1: A1_COLOR, A2: c, A3: A3_COLOR, A4: A4_COLOR, SYS: 'rgba(232,237,245,0.42)' }
   return (
     <Glass radius={20} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <div style={{ padding: '12px 18px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexShrink: 0 }}>
         <div style={{ display: 'flex', gap: 0 }}>
-          {[['feed', 'Stream'], ['advisory', 'Advisory']].map(([id, label]) => (
+          {[['feed', 'Stream'], ['advisory', 'Advisory'], ['relief', 'Relief']].map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)} style={{ padding: '0 0 10px', marginRight: 18, background: 'transparent', border: 'none', borderBottom: `2px solid ${tab === id ? c : 'transparent'}`, color: tab === id ? '#F4F7FB' : 'rgba(232,237,245,0.4)', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer' }}>
               {label}
               {id === 'advisory' && advisory && <span style={{ marginLeft: 4, color: '#5ee08b' }}>●</span>}
+              {id === 'relief' && reliefPlan && <span style={{ marginLeft: 4, color: A4_COLOR }}>●</span>}
             </button>
           ))}
         </div>
@@ -226,6 +230,14 @@ function StreamCard({ feedEntries, accent, advisory }) {
           ) : <Advisory advisory={advisory} c={c} />}
         </div>
       )}
+
+      {tab === 'relief' && (
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 18px 14px' }}>
+          {!reliefPlan ? (
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'rgba(232,237,245,0.28)' }}>▮ Awaiting Agent 4 relief dispatch</div>
+          ) : <ReliefPlanView plan={reliefPlan} c={A4_COLOR} />}
+        </div>
+      )}
     </Glass>
   )
 }
@@ -256,6 +268,69 @@ function Advisory({ advisory, c }) {
         s.resource_requirements.map((r, i) => <div key={i} style={{ marginBottom: 3 }}><span style={{ color: '#5aa8ff' }}>· </span>{r}</div>)
       )}
       {s.monitoring_status && block('Monitoring', 'rgba(232,237,245,0.6)', s.monitoring_status)}
+    </div>
+  )
+}
+
+function ReliefPlanView({ plan, c }) {
+  const s = plan?.data
+  if (!s) return null
+  const block = (label, color, children) => (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: color || 'rgba(232,237,245,0.5)', marginBottom: 7 }}>{label}</div>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'rgba(232,237,245,0.82)', lineHeight: 1.65 }}>{children}</div>
+    </div>
+  )
+  const typeColors = {
+    FIRE_STATION: '#ff5a4d', HOSPITAL: '#ff6bce', NDRF: '#5aa8ff',
+    SDRF: '#5ec4ff', CIVIL_DEFENCE: '#a8e063', AIRPORT_EMERGENCY: '#f97316',
+    MUNICIPAL_EMERGENCY: '#22d3ee', POLICE: '#9C8AFF',
+  }
+  return (
+    <div>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'rgba(232,237,245,0.32)', marginBottom: 14 }}>{new Date(plan.ts).toLocaleTimeString()}</div>
+      {s.coordination_note && (
+        <div style={{ padding: '8px 12px', background: `${c}18`, border: `1px solid ${c}44`, borderRadius: 10, marginBottom: 14, fontFamily: 'var(--font-mono)', fontSize: 12, color: '#F4F7FB', lineHeight: 1.5 }}>{s.coordination_note}</div>
+      )}
+      {s.dispatched_units?.length > 0 && block('Dispatched Units', c,
+        s.dispatched_units.map((u, i) => {
+          const uc = typeColors[u.type] || c
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10, padding: '8px 10px', background: `${uc}0f`, border: `1px solid ${uc}28`, borderRadius: 10 }}>
+              <div style={{ width: 5, height: 5, borderRadius: '50%', background: uc, boxShadow: `0 0 6px ${uc}`, flexShrink: 0, marginTop: 5 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, color: '#F4F7FB', fontWeight: 600 }}>{u.name}</div>
+                <div style={{ fontSize: 10, color: uc, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 2 }}>{u.type.replace('_', ' ')}</div>
+                <div style={{ fontSize: 11, color: 'rgba(232,237,245,0.65)' }}>{u.role}</div>
+                <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
+                  <Mn color="rgba(232,237,245,0.4)" size={9.5}>{(u.distance_m / 1000).toFixed(1)} km</Mn>
+                  <Mn color={uc} size={9.5} weight={600}>ETA {u.eta_min} min</Mn>
+                </div>
+              </div>
+            </div>
+          )
+        })
+      )}
+      {s.triage_sites?.length > 0 && block('Triage Sites', '#5ee08b',
+        s.triage_sites.map((t, i) => (
+          <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 5 }}>
+            <span style={{ color: '#5ee08b' }}>+</span>
+            <span>{t.label}</span>
+            <Mn color="rgba(232,237,245,0.45)" size={10.5}> · cap {t.capacity}</Mn>
+          </div>
+        ))
+      )}
+      {s.evacuation_routes?.length > 0 && block('Evacuation Routes', '#FCD34D',
+        s.evacuation_routes.map((r, i) => (
+          <div key={i} style={{ marginBottom: 8 }}>
+            <div style={{ color: '#FCD34D', fontWeight: 600 }}>{r.direction?.toUpperCase()} — {r.description}</div>
+            {r.notes && <div style={{ color: 'rgba(232,237,245,0.5)', fontSize: 11, marginTop: 2 }}>{r.notes}</div>}
+          </div>
+        ))
+      )}
+      {s.resource_gaps?.length > 0 && block('Resource Gaps', '#EF4444',
+        s.resource_gaps.map((g, i) => <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 4 }}><span style={{ color: '#EF4444' }}>✗</span><span>{g}</span></div>)
+      )}
     </div>
   )
 }
@@ -351,7 +426,7 @@ function SetupView({ type, severity, setSeverity, setType, capturedCoords, setCa
 }
 
 // ── Root panel ────────────────────────────────────────────────────────────────
-export default function SidePanel({ wsConnected, systemStatus, isSelectingLocation, onStartSelect, capturedCoords, setCapturedCoords, agentStates, feedEntries, advisory, onMissionStart }) {
+export default function SidePanel({ wsConnected, systemStatus, isSelectingLocation, onStartSelect, capturedCoords, setCapturedCoords, agentStates, feedEntries, advisory, reliefPlan, onMissionStart }) {
   const [type, setType] = useState(null)
   const [severity, setSeverity] = useState(null)
   const [deploying, setDeploying] = useState(false)
@@ -402,6 +477,7 @@ export default function SidePanel({ wsConnected, systemStatus, isSelectingLocati
     setSeverity(null)
     setSwarmCount(0)
     setDroneCount(1)
+    onMissionStart?.()
   }
 
   return (
@@ -429,7 +505,7 @@ export default function SidePanel({ wsConnected, systemStatus, isSelectingLocati
             droneCount={droneCount} swarmCount={swarmCount}
           />
           <AgentCard agentStates={agentStates} accent={accent} />
-          <StreamCard feedEntries={feedEntries} accent={accent} advisory={advisory} />
+          <StreamCard feedEntries={feedEntries} accent={accent} advisory={advisory} reliefPlan={reliefPlan} />
           <Glass radius={999} style={{ flexShrink: 0, padding: 0 }}>
             <button onClick={reset} style={{ width: '100%', padding: '10px', background: 'transparent', border: 'none', color: 'rgba(232,237,245,0.5)', fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 600, letterSpacing: '0.16em', cursor: 'pointer' }}>RESET MISSION</button>
           </Glass>

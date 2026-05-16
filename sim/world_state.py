@@ -1,6 +1,5 @@
 """World state: markers, drones, zones, survivors, hazards, tick loop."""
 
-import asyncio
 import json
 from pathlib import Path
 from typing import Dict, List, Optional, Set
@@ -54,6 +53,8 @@ class WorldState:
         self._running: bool = False
         self.bases: List[dict] = list(DEPLOYMENT_BASES)
         self._swarm_leaders: Set[str] = set()  # drone_ids tagged as swarm leader
+        self.boundary_polygon: Optional[List] = None
+        self.scenario_center: Optional[Dict[str, float]] = None
 
         if scenario_path:
             self.load_scenario(str(scenario_path))
@@ -67,6 +68,10 @@ class WorldState:
             "lon": home.get("lon", 0.0),
             "alt": home.get("alt", 0.0),
         }
+        self.boundary_polygon = data.get("boundary_polygon")
+        center = data.get("center")
+        if center:
+            self.scenario_center = {"lat": center["lat"], "lon": center["lon"]}
 
     # ── Markers ──────────────────────────────────────────────────────────
 
@@ -86,6 +91,7 @@ class WorldState:
         for drone in self.drones.values():
             t = drone.get_telemetry().__dict__.copy()
             t["swarm_leader"] = drone.drone_id in self._swarm_leaders
+            t["drone_type"] = drone.drone_type
             result.append(t)
         return result
 
@@ -152,21 +158,15 @@ class WorldState:
     # ── Hazards ───────────────────────────────────────────────────────────
 
     def add_hazard(self, hazard: dict) -> None:
+        hid = hazard.get("id")
+        if hid:
+            self.hazard_markers = [h for h in self.hazard_markers if h.get("id") != hid]
         self.hazard_markers.append(hazard)
 
     def get_hazard_markers(self) -> List[dict]:
         return list(self.hazard_markers)
 
     # ── Tick loop ─────────────────────────────────────────────────────────
-
-    async def start_tick_loop(self, tick_rate_hz: float = 10.0) -> None:
-        dt = 1.0 / tick_rate_hz
-        self._running = True
-        while self._running:
-            for drone in self.drones.values():
-                drone.tick(dt)
-            self.tick_count += 1
-            await asyncio.sleep(dt)
 
     def stop_tick_loop(self) -> None:
         self._running = False

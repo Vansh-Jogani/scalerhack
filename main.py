@@ -1,6 +1,8 @@
 import asyncio
 import json
+import math
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 
 import structlog
@@ -14,6 +16,7 @@ from pydantic import BaseModel
 from sim.world_state import WorldState
 from sim.sensor_overlay import SensorOverlay
 from orchestrator.orchestrator import ARIAOrchestrator
+from sim_layer.tracer import tracer
 
 load_dotenv()
 structlog.configure(
@@ -28,10 +31,15 @@ config_path = Path("config.yaml")
 with open(config_path) as f:
     config = yaml.safe_load(f)
 
+_rc_path = Path("frontend/src/data/response_centres.json")
+response_centres: list = json.loads(_rc_path.read_text()) if _rc_path.exists() else []
+
 world_state: WorldState | None = None
 sensor_overlay: SensorOverlay | None = None
 orchestrator: ARIAOrchestrator | None = None
 connected_clients: list[WebSocket] = []
+
+MAX_WS_CONNECTIONS = 20
 
 
 async def broadcast_event(event_type: str, data: dict) -> None:
@@ -57,6 +65,8 @@ async def lifespan(app: FastAPI):
         model_a1=config["models"]["agent1"],
         model_a2=config["models"]["agent2"],
         model_a3=config["models"]["agent3"],
+        model_a4=config["models"].get("agent4", config["models"]["agent3"]),
+        response_centres=response_centres,
     )
     orchestrator.set_event_callback(broadcast_event)
 
@@ -102,18 +112,21 @@ async def broadcast_loop():
             markers = [m.model_dump() for m in world_state.get_markers()]
             zones = world_state.get_zones()
             survivors = world_state.get_survivor_markers()
-
             bases = world_state.get_bases()
+
+            frame = {
+                "type": "frame",
+                "data": {
+                    "telemetry": telemetry,
+                    "markers": markers,
+                    "bases": bases,
+                    "zones": zones if zones else [],
+                    "survivors": survivors if survivors else [],
+                },
+            }
             for ws in list(connected_clients):
                 try:
-                    for t in telemetry:
-                        await ws.send_json({"type": "telemetry", "data": t})
-                    await ws.send_json({"type": "markers", "data": markers})
-                    await ws.send_json({"type": "bases", "data": bases})
-                    if zones:
-                        await ws.send_json({"type": "zones", "data": zones})
-                    if survivors:
-                        await ws.send_json({"type": "survivors", "data": survivors})
+                    await ws.send_json(frame)
                 except Exception:
                     if ws in connected_clients:
                         connected_clients.remove(ws)
@@ -176,6 +189,9 @@ async def create_incident(payload: IncidentPayload):
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    if len(connected_clients) >= MAX_WS_CONNECTIONS:
+        await websocket.close(code=4003, reason="max connections reached")
+        return
     await websocket.accept()
     connected_clients.append(websocket)
     logger.info("ws_connected", client=str(websocket.client))
@@ -209,6 +225,136 @@ async def websocket_endpoint(websocket: WebSocket):
         if websocket in connected_clients:
             connected_clients.remove(websocket)
         logger.info("ws_disconnected")
+
+
+# ── Webhook endpoint — external event ingress ──────────────────────────────────
+
+class WebhookAlert(BaseModel):
+    source: str
+    alert_type: str
+    lat: float
+    lon: float
+    severity: str = "medium"
+    description: str = ""
+    timestamp: str | None = None
+
+
+def _haversine_distance(lat1, lon1, lat2, lon2):
+    R = 6_371_000.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(
+        math.radians(lat2)
+    ) * math.sin(dlon / 2) ** 2
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+@app.post("/api/webhook/alert")
+async def receive_webhook_alert(alert: WebhookAlert):
+    """External event ingress — accepts IoT sensor alerts, citizen reports, weather warnings."""
+    ts = alert.timestamp or datetime.now(timezone.utc).isoformat()
+    logger.info(
+        "webhook_received",
+        source=alert.source,
+        alert_type=alert.alert_type,
+        lat=alert.lat,
+        lon=alert.lon,
+        severity=alert.severity,
+    )
+    tracer.trace_webhook(alert.source, alert.alert_type, {"lat": alert.lat, "lon": alert.lon, "severity": alert.severity})
+
+    await broadcast_event("webhook_received", {
+        "source": alert.source,
+        "alert_type": alert.alert_type,
+        "lat": alert.lat,
+        "lon": alert.lon,
+        "severity": alert.severity,
+        "description": alert.description,
+        "timestamp": ts,
+    })
+
+    # Check if this alert is near an existing active marker
+    near_existing = False
+    for marker in world_state.get_markers():
+        dist = _haversine_distance(alert.lat, alert.lon, marker.lat, marker.lon)
+        if dist < (marker.radius_m + 200):
+            near_existing = True
+            logger.info("webhook_near_existing", marker_id=marker.id, distance_m=dist)
+            if orchestrator:
+                event = {
+                    "type": "external_alert",
+                    "source": alert.source,
+                    "alert_type": alert.alert_type,
+                    "severity": alert.severity,
+                    "description": alert.description,
+                    "near_marker": marker.id,
+                }
+                await orchestrator.trigger_world_event(event)
+            break
+
+    if not near_existing:
+        # New location — create a new incident
+        disaster_map = {
+            "smoke_detected": "fire",
+            "fire_alarm": "fire",
+            "flood_warning": "flood",
+            "gas_leak": "industrial_hazard",
+            "structural_alert": "structural_collapse",
+            "person_in_water": "maritime_sar",
+        }
+        disaster_type = disaster_map.get(alert.alert_type, "fire")
+        go_payload = {
+            "area": {"center": {"lat": alert.lat, "lon": alert.lon}, "radius_m": 600.0},
+            "disaster_type": disaster_type,
+            "severity": alert.severity,
+        }
+        agent1_payload = await orchestrator.receive_go_signal(go_payload)
+        asyncio.create_task(world_event_task(delay=30))
+        logger.info("webhook_new_incident", incident_id=agent1_payload.get("incident_id"))
+        return {
+            "status": "new_incident_created",
+            "incident_id": agent1_payload.get("incident_id"),
+            "source": alert.source,
+            "timestamp": ts,
+        }
+
+    return {
+        "status": "existing_incident_updated",
+        "source": alert.source,
+        "timestamp": ts,
+    }
+
+
+# ── Pipeline status endpoint ───────────────────────────────────────────────────
+
+@app.get("/api/pipeline/status")
+async def pipeline_status():
+    """Returns current orchestrator state, active incidents, and agent statuses."""
+    state = "unknown"
+    incidents = []
+    if orchestrator:
+        state = getattr(orchestrator, "current_state", "STANDBY")
+        if hasattr(orchestrator, "incident_manager") and orchestrator.incident_manager:
+            im = orchestrator.incident_manager
+            for mid, incident in getattr(im, "active_incidents", {}).items():
+                incidents.append({
+                    "marker_id": mid,
+                    "status": getattr(incident, "status", "active"),
+                })
+            for queued in getattr(im, "incident_queue", []):
+                incidents.append({
+                    "marker_id": getattr(queued, "id", "unknown"),
+                    "status": "queued",
+                })
+
+    return {
+        "orchestrator_state": state,
+        "active_incidents": incidents,
+        "connected_clients": len(connected_clients),
+        "drones": len(world_state.drones) if world_state else 0,
+        "markers": len(world_state.get_markers()) if world_state else 0,
+        "uptime_s": None,
+    }
 
 
 if __name__ == "__main__":

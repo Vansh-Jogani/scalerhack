@@ -23,7 +23,8 @@ export default function App() {
   const [isSelectingLocation, setIsSelectingLocation] = useState(false)
   const [capturedCoords, setCapturedCoords] = useState(null)
   const [advisory, setAdvisory] = useState(null)
-  const [agentStates, setAgentStates] = useState({ A1: 'idle', A2: 'idle', A3: 'idle' })
+  const [reliefPlan, setReliefPlan] = useState(null)
+  const [agentStates, setAgentStates] = useState({ A1: 'idle', A2: 'idle', A3: 'idle', A4: 'idle' })
   const [feedEntries, setFeedEntries] = useState([])
   const [wsConnected, setWsConnected] = useState(false)
 
@@ -41,6 +42,27 @@ export default function App() {
     }
     if (msg.type === 'bases' && Array.isArray(msg.data)) MapStateManager.renderBases(msg.data)
 
+    if (msg.type === 'frame') {
+      const d = msg.data || {}
+      d.telemetry?.forEach((t) =>
+        MapStateManager.receive({ type: 'map_update', action: 'update_drone', incident_id: null, payload: t })
+      )
+      if (d.markers) {
+        d.markers.forEach((m) => {
+          MapStateManager.receive({ type: 'map_update', action: 'add_marker', incident_id: m.id,
+            payload: { lat: m.lat, lon: m.lon, type: m.type, severity: m.severity || 'MEDIUM', status: 'ACTIVE' } })
+          setIncidents(prev => ({ ...prev, [m.id]: { type: m.type, severity: m.severity || 'medium', status: 'ACTIVE' } }))
+        })
+      }
+      if (d.bases) MapStateManager.renderBases(d.bases)
+      if (d.zones?.length) d.zones.forEach((zone) =>
+        MapStateManager.receive({ type: 'map_update', action: 'add_zone', incident_id: zone.incident_id || null, payload: zone })
+      )
+      if (d.survivors?.length) d.survivors.forEach((s) =>
+        MapStateManager.receive({ type: 'map_update', action: 'add_survivor', incident_id: null,
+          payload: { id: s.id, lat: s.lat, lon: s.lon, survivor_count: s.count, probability: s.probability, detected_by: 'swarm', time: new Date().toLocaleTimeString() } })
+      )
+    }
     if (msg.type === 'telemetry') {
       MapStateManager.receive({ type: 'map_update', action: 'update_drone', incident_id: null, payload: msg.data })
     }
@@ -68,6 +90,10 @@ export default function App() {
       setAdvisory({ data: msg.data, ts: new Date().toISOString() })
       setAgentStates(prev => ({ ...prev, A3: 'done' }))
     }
+    if (msg.type === 'relief_plan' && msg.data) {
+      setReliefPlan({ data: msg.data, ts: new Date().toISOString() })
+      setAgentStates(prev => ({ ...prev, A4: 'done' }))
+    }
     if (msg.type === 'agent_stream') {
       const d = msg.data || {}
       const rawId = (d.agent_id || '').toLowerCase()
@@ -75,6 +101,7 @@ export default function App() {
       if (rawId.startsWith('agent-1')) agent = 'A1'
       else if (rawId.startsWith('agent-2')) agent = 'A2'
       else if (rawId.startsWith('agent-3')) agent = 'A3'
+      else if (rawId.startsWith('agent-4')) agent = 'A4'
 
       // Update agent states
       const ev = d.event || ''
@@ -95,6 +122,11 @@ export default function App() {
           if (ev === 'advisory_issued' || ev === 'advisory_updated') next.A3 = 'done'
           if (ev === 'error') next.A3 = 'error'
         }
+        if (agent === 'A4') {
+          if (ev === 'started' || ev === 'relief_started') next.A4 = 'active'
+          if (ev === 'relief_issued') next.A4 = 'done'
+          if (ev === 'error') next.A4 = 'error'
+        }
         return next
       })
 
@@ -109,9 +141,10 @@ export default function App() {
   }
 
   function handleMissionStart() {
-    setAgentStates({ A1: 'idle', A2: 'idle', A3: 'idle' })
+    setAgentStates({ A1: 'idle', A2: 'idle', A3: 'idle', A4: 'idle' })
     setFeedEntries([])
     setAdvisory(null)
+    setReliefPlan(null)
   }
 
   return (
@@ -132,6 +165,7 @@ export default function App() {
         agentStates={agentStates}
         feedEntries={feedEntries}
         advisory={advisory}
+        reliefPlan={reliefPlan}
         onMissionStart={handleMissionStart}
       />
     </div>

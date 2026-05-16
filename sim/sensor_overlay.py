@@ -1,10 +1,14 @@
 """Synthetic sensor returns — radius-based (per CHANGE 3, 2026-05-15)."""
 
-import math
+import structlog
+
+from sim.math_utils import haversine_distance
+
+logger = structlog.get_logger()
 
 
 def point_in_polygon(lat: float, lon: float, polygon: list) -> bool:
-    """Ray-casting point-in-polygon check (kept for utility use)."""
+    """Ray-casting point-in-polygon check."""
     inside = False
     j = len(polygon) - 1
     for i in range(len(polygon)):
@@ -17,16 +21,6 @@ def point_in_polygon(lat: float, lon: float, polygon: list) -> bool:
             inside = not inside
         j = i
     return inside
-
-
-def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    R = 6_371_000.0
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(
-        math.radians(lat2)
-    ) * math.sin(dlon / 2) ** 2
-    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 _SENSOR_RETURNS: dict[str, dict] = {
@@ -62,9 +56,17 @@ _SENSOR_RETURNS: dict[str, dict] = {
         "thermal_detected": True,
         "survivor_probability": 0.5,
         "hazard_flags": ["rough_seas"],
-        "visibility_m": 8000.0,
+        "visibility_m": 4000.0,
         "wind_speed": 20.0,
     },
+}
+
+_FALLBACK_RETURN = {
+    "thermal_detected": False,
+    "survivor_probability": 0.0,
+    "hazard_flags": [],
+    "visibility_m": 10000.0,
+    "wind_speed": 5.0,
 }
 
 
@@ -89,7 +91,11 @@ class SensorOverlay:
         self.disaster_type = disaster_type
 
     def get_reading(self, drone_id: str, world_state) -> dict | None:
-        """Return sensor data if drone is within incident radius, else None."""
+        """Return sensor data if drone is within incident radius, else None.
+
+        Returned dict includes distance_m and intensity (0.0–1.0, strongest at
+        center) so agents can reason about proximity to the incident.
+        """
         if self.center_lat is None or self.disaster_type is None:
             return None
 
@@ -97,19 +103,24 @@ class SensorOverlay:
         if telemetry is None:
             return None
 
-        dist = _haversine(
+        dist = haversine_distance(
             telemetry.lat, telemetry.lon, self.center_lat, self.center_lon
         )
         if dist > self.radius_m:
             return None
 
-        return _SENSOR_RETURNS.get(
-            self.disaster_type,
-            {
-                "thermal_detected": False,
-                "survivor_probability": 0.0,
-                "hazard_flags": [],
-                "visibility_m": 10000.0,
-                "wind_speed": 5.0,
-            },
-        )
+        base = _SENSOR_RETURNS.get(self.disaster_type)
+        if base is None:
+            logger.warning(
+                "sensor_overlay_unknown_type",
+                disaster_type=self.disaster_type,
+                drone_id=drone_id,
+            )
+            base = _FALLBACK_RETURN
+
+        intensity = round(1.0 - (dist / self.radius_m), 3)
+        return {
+            **base,
+            "distance_m": round(dist, 1),
+            "intensity": intensity,
+        }
