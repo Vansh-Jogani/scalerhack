@@ -148,8 +148,8 @@ class ReliefAgent:
         center_lat = center.get("lat", 17.3950)
         center_lon = center.get("lon", 78.4967)
 
-        staging_lat = self.staging_lat if self.staging_lat is not None else center_lat
-        staging_lon = self.staging_lon if self.staging_lon is not None else center_lon
+        staging_lat = self.staging_lat if self.staging_lat is not None else self.world_state.home_position["lat"]
+        staging_lon = self.staging_lon if self.staging_lon is not None else self.world_state.home_position["lon"]
 
         num_drones = self.config["drones"]
         drone_type = self.config["drone_type"]

@@ -1,49 +1,29 @@
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif&display=swap');
 
-/* ─── Color system ─── */
 :root {
-  --bg:            #0A0E14;
-  --surface:       #111822;
-  --surface-2:     #1A2535;
-  --border:        #243044;
-  --text-primary:  #E8EDF5;
-  --text-secondary:#7A8FA8;
-  --success:       #00FF88;
-  --warning:       #FFB800;
-  --critical:      #FF3B3B;
-
-  --disaster-fire:        #FF3B3B;
-  --disaster-structural:  #FF8C42;
-  --disaster-flood:       #2196F3;
-  --disaster-industrial:  #9E9E9E;
-  --disaster-maritime:    #00CED1;
-
-  --font-display: 'Rajdhani', sans-serif;
-  --font-mono:    'JetBrains Mono', monospace;
-  --font-body:    'DM Sans', sans-serif;
+  --bg:            #0a0a0a;
+  --surface:       rgba(10, 14, 20, 0.58);
+  --border:        rgba(255,255,255,0.07);
+  --text-primary:  #F4F7FB;
+  --text-secondary:rgba(232,237,245,0.45);
+  --text-dim:      rgba(232,237,245,0.32);
+  --success:       #5ee08b;
+  --font-display:  'Rajdhani', sans-serif;
+  --font-mono:     'JetBrains Mono', monospace;
+  --font-body:     'Inter Tight', system-ui, sans-serif;
+  --font-serif:    'Instrument Serif', serif;
 }
 
-/* ─── Global reset ─── */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 button {
-  -webkit-appearance: none;
-  appearance: none;
-  background: transparent;
-  border: none;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
+  -webkit-appearance: none; appearance: none;
+  background: transparent; border: none;
+  color: inherit; font: inherit; cursor: pointer;
 }
 
 html, body, #root {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
+  width: 100%; height: 100%; overflow: hidden;
   background: var(--bg);
   color: var(--text-primary);
   font-family: var(--font-body);
@@ -52,38 +32,46 @@ html, body, #root {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ─── Scrollbar ─── */
-::-webkit-scrollbar {
-  width: 4px;
-}
-::-webkit-scrollbar-track {
-  background: var(--surface);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 2px;
-}
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
 
-/* ─── Keyframes ─── */
-@keyframes pulse-ring {
-  0%   { transform: scale(1);   opacity: 0.7; }
-  100% { transform: scale(2.4); opacity: 0;   }
+/* ── Drone / incident animations ── */
+@keyframes beaconRing {
+  0%   { transform: scale(0.5); opacity: 0.9; }
+  80%  { opacity: 0.1; }
+  100% { transform: scale(2.4); opacity: 0; }
 }
-
-@keyframes survivor-pulse {
-  0%   { transform: scale(1);   opacity: 0.8; }
-  100% { transform: scale(2.3); opacity: 0;   }
+@keyframes beaconCore {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  50%      { transform: translate(-50%, -50%) scale(0.7); opacity: 0.65; }
 }
-
-@keyframes blink-cursor {
+@keyframes swarmBreathe {
   0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
+  50%      { opacity: 0.45; }
+}
+@keyframes breathe {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(0.92); }
+}
+@keyframes ringPulse {
+  0%   { transform: scale(0.6); opacity: 1; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+@keyframes flow {
+  0%   { background-position: 0% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes ticker {
+  0%   { transform: translateY(6px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
 }
 
-@keyframes fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
+/* Mapbox GL overrides */
+.mapboxgl-ctrl-bottom-right { bottom: 28px !important; right: 8px !important; }
+.mapboxgl-ctrl-group { background: rgba(10,14,20,0.72) !important; border: 1px solid rgba(255,255,255,0.08) !important; }
+.mapboxgl-ctrl-group button { color: rgba(232,237,245,0.7) !important; }
+.mapboxgl-ctrl-attrib { display: none !important; }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
@@ -456,3 +444,17 @@ html, body, #root {
   color: var(--text-primary);
   text-transform: uppercase;
 }
+
+/* ─── ARIA popup override ─── */
+.mapboxgl-popup-content.aria-popup,
+.aria-popup .mapboxgl-popup-content {
+  background: rgba(10,14,20,0.92) !important;
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.09) !important;
+  border-radius: 6px !important;
+  padding: 10px 12px !important;
+  color: #F4F7FB !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5) !important;
+}
+.mapboxgl-popup-tip { display: none; }
+.mapboxgl-popup-tip { display: none; }

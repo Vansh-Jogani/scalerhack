@@ -102,10 +102,13 @@ async def broadcast_loop():
             zones = world_state.get_zones()
             survivors = world_state.get_survivor_markers()
 
+            bases = world_state.get_bases()
             for ws in list(connected_clients):
                 try:
                     for t in telemetry:
                         await ws.send_json({"type": "telemetry", "data": t})
+                    await ws.send_json({"type": "markers", "data": markers})
+                    await ws.send_json({"type": "bases", "data": bases})
                     if zones:
                         await ws.send_json({"type": "zones", "data": zones})
                     if survivors:
@@ -180,6 +183,7 @@ async def websocket_endpoint(websocket: WebSocket):
         "status": "connected",
         "drones": len(world_state.drones),
         "markers": len(world_state.markers),
+        "bases": world_state.get_bases(),
     })
     try:
         while True:

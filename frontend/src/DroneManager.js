@@ -1,7 +1,8 @@
-import L from 'leaflet'
+import mapboxgl from 'mapbox-gl'
 import { DRONE_STATES } from './constants.js'
 
 const LERP_MS = 500
+const TRAIL_MAX = 60
 
 // ── Drone type config ────────────────────────────────────────────────────────
 
@@ -13,7 +14,6 @@ const DRONE_VISUAL = {
 
 // ── SVG shapes ───────────────────────────────────────────────────────────────
 
-// Fixed-wing: solid filled arrow pointing up — large, dominant
 function fixedWingSVG(color) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 38 38" width="22" height="22">
     <g style="filter:drop-shadow(0 0 4px ${color})">
@@ -24,7 +24,6 @@ function fixedWingSVG(color) {
   </svg>`
 }
 
-// Rotary: diamond body + 4 radiating arms — medium, cross-shaped
 function rotarySVG(color) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="16" height="16">
     <g style="filter:drop-shadow(0 0 3px ${color})">
@@ -38,7 +37,6 @@ function rotarySVG(color) {
   </svg>`
 }
 
-// Micro-rotary: circle with crosshairs — small, precision symbol
 function microRotarySVG(color) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="12" height="12">
     <g style="filter:drop-shadow(0 0 2px ${color})">
@@ -90,42 +88,60 @@ class _DroneManager {
     if (!this._map) return
     const { drone_id, lat, lon, heading, state, battery_pct, alt, speed, drone_type = 'rotary' } = data
     const visual = DRONE_VISUAL[drone_type] || DRONE_VISUAL.rotary
-    const { color, size, anchor } = visual
+    const { color, size } = visual
 
     if (!this._drones[drone_id]) {
       const svg = buildSVG(drone_type, color)
       const typeLabel = drone_type.replace(/_/g, '-')
-      const html = `<div class="drone-marker">
-        <div class="drone-svg">${svg}</div>
-        <div class="drone-state-badge" style="background:${DRONE_STATES[state] || DRONE_STATES.IDLE}"></div>
-      </div>`
-      const icon = L.divIcon({ className: '', html, iconSize: [size, size], iconAnchor: anchor })
-      const marker = L.marker([lat, lon], { icon, interactive: true }).addTo(this._map)
 
-      const initialState = state || 'IDLE'
-      if (initialState === 'IDLE') marker.setOpacity(0)
+      const el = document.createElement('div')
+      el.style.cssText = `width:${size}px;height:${size}px;cursor:pointer;transition:opacity 0.3s`
+      el.innerHTML = svg
 
-      marker.bindPopup(() => {
+      const popup = new mapboxgl.Popup({ className: 'aria-popup', closeButton: false, offset: 14 })
+      popup.on('open', () => {
         const d = this._drones[drone_id]
-        if (!d) return ''
-        return `<div style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8">
+        if (!d) return
+        popup.setHTML(`<div style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8">
           <div><span style="color:#7A8FA8">ID   </span> ${drone_id}</div>
           <div><span style="color:#7A8FA8">TYPE </span> <span style="color:${color}">${typeLabel}</span></div>
           <div><span style="color:#7A8FA8">STATE</span> ${d.state}</div>
           <div><span style="color:#7A8FA8">BAT  </span> ${d.battery_pct != null ? d.battery_pct.toFixed(0) + '%' : '?'}</div>
           <div><span style="color:#7A8FA8">ALT  </span> ${d.alt != null ? d.alt.toFixed(0) + 'm' : '?'}</div>
           <div><span style="color:#7A8FA8">SPD  </span> ${d.speed != null ? d.speed.toFixed(1) + ' m/s' : '?'}</div>
-        </div>`
-      }, { className: 'aria-popup' })
+        </div>`)
+      })
+
+      const marker = new mapboxgl.Marker(el, { anchor: 'center' })
+        .setLngLat([lon, lat])
+        .setPopup(popup)
+        .addTo(this._map)
+
+      // Trail as Mapbox GeoJSON source + line layer
+      const trailId = `drone-trail-${drone_id}`
+      this._map.addSource(trailId, {
+        type: 'geojson',
+        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } },
+      })
+      this._map.addLayer({
+        id: trailId,
+        type: 'line',
+        source: trailId,
+        paint: { 'line-color': color, 'line-width': 1.5, 'line-opacity': 0.4, 'line-dasharray': [3, 3] },
+      })
+
+      const initialState = state || 'IDLE'
+      if (initialState === 'IDLE') el.style.opacity = '0'
 
       this._drones[drone_id] = {
-        marker,
+        marker, trailId,
         startLat: lat, startLon: lon,
         targetLat: lat, targetLon: lon,
         currentLat: lat, currentLon: lon,
         animStart: performance.now(),
         bearing: heading || 0,
         state: initialState,
+        trailCoords: [],
         battery_pct, alt, speed, color, drone_type,
       }
     } else {
@@ -141,13 +157,10 @@ class _DroneManager {
       d.alt = alt ?? d.alt
       d.speed = speed ?? d.speed
 
-      if (prevState === 'IDLE' && d.state !== 'IDLE') d.marker.setOpacity(1)
-      if (d.state === 'IDLE') d.marker.setOpacity(0)
-
       const el = d.marker.getElement()
       if (el) {
-        const badge = el.querySelector('.drone-state-badge')
-        if (badge) badge.style.background = DRONE_STATES[d.state] || DRONE_STATES.IDLE
+        if (prevState === 'IDLE' && d.state !== 'IDLE') el.style.opacity = '1'
+        if (d.state === 'IDLE') el.style.opacity = '0'
       }
     }
   }
@@ -163,7 +176,7 @@ class _DroneManager {
       const newLon = lerp(d.startLon, d.targetLon, t)
       d.currentLat = newLat
       d.currentLon = newLon
-      d.marker.setLatLng([newLat, newLon])
+      d.marker.setLngLat([newLon, newLat])
 
       const dLat = d.targetLat - d.startLat
       const dLon = d.targetLon - d.startLon
@@ -171,9 +184,13 @@ class _DroneManager {
         d.bearing = bearingDeg(d.startLat, d.startLon, d.targetLat, d.targetLon)
       }
       const el = d.marker.getElement()
-      if (el) {
-        const svg = el.querySelector('.drone-svg')
-        if (svg) svg.style.transform = `rotate(${d.bearing}deg)`
+      if (el) el.style.transform = `rotate(${d.bearing}deg)`
+
+      if (t >= 1) {
+        d.trailCoords.push([newLon, newLat])
+        if (d.trailCoords.length > TRAIL_MAX) d.trailCoords.shift()
+        const src = this._map.getSource(d.trailId)
+        if (src) src.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: d.trailCoords } })
       }
     })
 

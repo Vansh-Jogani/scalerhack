@@ -40,13 +40,17 @@ REPORT_CLASSIFICATION_TOOL = {
                 },
                 "required": ["thermal_detected", "survivor_probability", "hazard_flags", "wind_speed", "visibility_m"],
             },
+            "confirmed_hint": {
+                "type": "boolean",
+                "description": "True if your sensor classification matches the operator's type_hint. False if you revised it.",
+            },
             "recommended_swarm": {
                 "type": "string",
                 "description": "Not used by Agent 1 — leave empty, orchestrator selects",
             },
             "notes": {"type": "string", "description": "Additional observations"},
         },
-        "required": ["incident_id", "classification", "confidence", "area", "sensor_summary", "notes"],
+        "required": ["incident_id", "classification", "confidence", "area", "sensor_summary", "confirmed_hint", "notes"],
     },
 }
 
