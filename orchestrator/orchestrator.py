@@ -18,6 +18,7 @@ from orchestrator.classifier import classify
 from orchestrator.incident_manager import IncidentManager
 
 from orchestrator.event_bus import EventBus
+from sim_layer.tracer import tracer
 
 logger = structlog.get_logger()
 
@@ -29,6 +30,7 @@ class ARIAState(TypedDict):
     agent2_findings: Optional[dict]
     relief_plan: Optional[dict]
     advisory: Optional[dict]
+    relief_plan: Optional[dict]
     error: Optional[str]
 
 
@@ -56,6 +58,10 @@ class ARIAOrchestrator:
         model_a2: str = "claude-haiku-4-5-20251001",
         model_a3: str = "claude-haiku-4-5-20251001",
         model_a4: str = "claude-haiku-4-5-20251001",
+<<<<<<< HEAD
+=======
+        response_centres: list | None = None,
+>>>>>>> 24c6382f974245ec571eddb1af70efedb54b5a47
     ) -> None:
         self.world_state = world_state
         self.sensor_overlay = sensor_overlay
@@ -63,6 +69,10 @@ class ARIAOrchestrator:
         self.model_a2 = model_a2
         self.model_a3 = model_a3
         self.model_a4 = model_a4
+<<<<<<< HEAD
+=======
+        self.response_centres = response_centres or []
+>>>>>>> 24c6382f974245ec571eddb1af70efedb54b5a47
         self.state = "STANDBY"
         self.active_incident: dict | None = None
         self.event_callback = None
@@ -75,7 +85,15 @@ class ARIAOrchestrator:
         self.event_bus = EventBus()
         self.latest_briefing = None
         self._graph = None
+<<<<<<< HEAD
         self._agent1_decision: dict | None = None
+=======
+        self.incident_manager = None
+
+    @property
+    def current_state(self) -> str:
+        return self.state
+>>>>>>> 24c6382f974245ec571eddb1af70efedb54b5a47
 
     def set_event_callback(self, callback) -> None:
         self.event_callback = callback
@@ -89,11 +107,18 @@ class ARIAOrchestrator:
         builder.add_node("swarm", self._swarm_node)
         builder.add_node("relief", self._relief_node)
         builder.add_node("advisory", self._advisory_node)
+        builder.add_node("relief", self._relief_node)
         builder.add_edge(START, "surveillance")
         builder.add_edge("surveillance", "swarm")
+<<<<<<< HEAD
         builder.add_edge("swarm", "relief")
         builder.add_edge("relief", "advisory")
         builder.add_edge("advisory", END)
+=======
+        builder.add_edge("swarm", "advisory")
+        builder.add_edge("advisory", "relief")
+        builder.add_edge("relief", END)
+>>>>>>> 24c6382f974245ec571eddb1af70efedb54b5a47
         self._graph = builder.compile(checkpointer=checkpointer)
         logger.info("langgraph_compiled")
 
@@ -157,6 +182,9 @@ class ARIAOrchestrator:
         }
         logger.info("go_signal_processed", state=self.state, disaster_type=disaster_type, incident_id=incident_id)
 
+        tracer.start_trace(incident_id)
+        tracer.trace_state_transition(incident_id, "STANDBY", "SURVEILLANCE_ACTIVE")
+
         if self._graph:
             asyncio.create_task(self._run_graph(incident_id, agent1_payload))
         else:
@@ -215,6 +243,12 @@ class ARIAOrchestrator:
     def get_incident_context(self) -> dict | None:
         return self.active_incident
 
+    def receive_agent4_plan(self, plan: dict) -> None:
+        logger.info("agent4_plan_received", units=len(plan.get("dispatched_units", [])))
+        if self._agent4_future and not self._agent4_future.done():
+            self._agent4_future.set_result(plan)
+        asyncio.create_task(self._emit("relief_plan", plan))
+
     async def trigger_world_event(self, event: dict) -> None:
         await self._emit("agent_stream", {"agent_id": "world", "event": "world_event", "content": event})
         await self.event_bus.publish("world_event_fired", event)
@@ -226,6 +260,8 @@ class ARIAOrchestrator:
 
         loop = asyncio.get_event_loop()
         self._agent1_future = loop.create_future()
+
+        span = tracer.trace_agent_start(state["incident_id"], "agent1_surveillance", {"model": self.model_a1})
 
         agent1 = SurveillanceAgent(
             agent_id=f"agent-1-{state['incident_id']}",
@@ -247,10 +283,16 @@ class ARIAOrchestrator:
             report = await asyncio.wait_for(self._agent1_future, timeout=300.0)
         except asyncio.TimeoutError:
             logger.error("agent1_timeout")
+            if span:
+                span.end("timeout")
             return {"error": "agent1 timeout", "agent1_report": None}
         finally:
             self._agent1_future = None
 
+        if span:
+            span.add_event("classification_received", report.get("classification") if isinstance(report, dict) else None)
+            span.end("ok")
+        tracer.trace_state_transition(state["incident_id"], "SURVEILLANCE_ACTIVE", "SWARM_ACTIVE")
         return {"agent1_report": report if isinstance(report, dict) else dict(report)}
 
     async def _swarm_node(self, state: ARIAState) -> dict:
@@ -277,6 +319,11 @@ class ARIAOrchestrator:
         loop = asyncio.get_event_loop()
         self._agent2_future = loop.create_future()
 
+<<<<<<< HEAD
+=======
+        classification = a1_report.get("classification", "fire")
+        span = tracer.trace_agent_start(state["incident_id"], "agent2_specialist", {"classification": classification})
+>>>>>>> 24c6382f974245ec571eddb1af70efedb54b5a47
         agent2 = SpecialistAgent(
             agent_id=f"agent-2-{state['incident_id']}",
             model=self.model_a2,
@@ -291,6 +338,7 @@ class ARIAOrchestrator:
         )
         swarm_cfg = __import__('agents.agent2_specialist', fromlist=['SWARM_CAPABILITIES']).SWARM_CAPABILITIES.get(classification, {})
         await self._emit("agent_stream", {"agent_id": "orchestrator", "event": "node_transition", "content": f"LangGraph: surveillance → swarm · A1 classified {classification}"})
+        await self._emit("agent_stream", {"agent_id": "orchestrator", "event": "fan_out_started", "content": f"ASYNC FAN-OUT: deploying {swarm_cfg.get('drones', '?')} drones in parallel · tasks: {swarm_cfg.get('priority_tasks', [])}"})
         await self._emit("agent_stream", {"agent_id": "agent-2", "event": "dispatched", "content": f"Swarm selected: {swarm_cfg.get('swarm','?')} · {swarm_cfg.get('drones','?')} drones · alt {swarm_cfg.get('altitude','?')}m · constraint: {swarm_cfg.get('constraint','none')}"})
         await self._emit("agent_stream", {"agent_id": "agent-2", "event": "tools_loaded", "content": f"Tools: fly_to, find_nearest_base, launch_from_base, get_sensor_reading, report_findings"})
         asyncio.create_task(agent2.run(a1_report))
@@ -300,10 +348,16 @@ class ARIAOrchestrator:
             findings = await asyncio.wait_for(self._agent2_future, timeout=300.0)
         except asyncio.TimeoutError:
             logger.error("agent2_timeout")
+            if span:
+                span.end("timeout")
             return {"agent2_findings": {}}
         finally:
             self._agent2_future = None
 
+        if span:
+            span.add_event("findings_received", {"coverage": findings.get("coverage_pct") if isinstance(findings, dict) else None})
+            span.end("ok")
+        tracer.trace_state_transition(state["incident_id"], "SWARM_ACTIVE", "ADVISORY_ACTIVE")
         return {"agent2_findings": findings if isinstance(findings, dict) else dict(findings)}
 
     async def _relief_node(self, state: ARIAState) -> dict:
@@ -349,6 +403,7 @@ class ARIAOrchestrator:
         from agents.messages import IncidentBriefing
 
         self.state = "ADVISORY_ACTIVE"
+        span = tracer.trace_agent_start(state["incident_id"], "agent3_advisory")
         briefing = IncidentBriefing.from_dicts(
             incident_id=state["incident_id"],
             a1_data=state.get("agent1_report") or {},
@@ -361,13 +416,54 @@ class ARIAOrchestrator:
         agent3 = AdvisoryAgent(model=self.model_a3, orchestrator=self)
         await self._emit("agent_stream", {"agent_id": "agent-3", "event": "briefing_received", "content": f"Incident {state['incident_id']} · A1 + A2 data ingested · generating response plan"})
         advisory = await agent3.on_trigger(briefing)
+        if span:
+            span.add_event("advisory_generated", {"actions": len(advisory.get("immediate_actions", []))})
+            span.end("ok")
         await self._emit("advisory", advisory)
         situation = advisory.get("situation_summary", "")
         actions = len(advisory.get("immediate_actions", []))
         flags = len(advisory.get("risk_flags", []))
         await self._emit("agent_stream", {"agent_id": "agent-3", "event": "advisory_issued", "content": f"Advisory issued · {actions} immediate actions · {flags} risk flags · {situation[:80]}…" if len(situation) > 80 else f"Advisory issued · {actions} immediate actions · {flags} risk flags"})
-        await self._emit("agent_stream", {"agent_id": "orchestrator", "event": "pipeline_complete", "content": f"LangGraph: advisory → END · mission pipeline complete"})
+        await self._emit("agent_stream", {"agent_id": "orchestrator", "event": "node_transition", "content": "LangGraph: advisory → relief · coordinating ground response"})
         return {"advisory": advisory}
+
+    async def _relief_node(self, state: ARIAState) -> dict:
+        from agents.agent4_relief import ReliefAgent
+
+        self.state = "RELIEF_ACTIVE"
+        advisory = state.get("advisory") or {}
+        a1_report = state.get("agent1_report") or {}
+        incident_context = {
+            "incident_id": state["incident_id"],
+            "classification": a1_report.get("classification", "unknown"),
+            "area": a1_report.get("area", {}),
+        }
+
+        loop = asyncio.get_event_loop()
+        self._agent4_future = loop.create_future()
+
+        agent4 = ReliefAgent(
+            agent_id=f"agent-4-{state['incident_id']}",
+            model=self.model_a4,
+            orchestrator=self,
+            response_centres=self.response_centres,
+            stream_callback=self.event_callback,
+        )
+        await self._emit("agent_stream", {"agent_id": "orchestrator", "event": "node_transition", "content": f"LangGraph: advisory → relief · locating ground rescue units for {incident_context['classification']}"})
+        await self._emit("agent_stream", {"agent_id": "agent-4", "event": "dispatched", "content": f"Relief agent online · {incident_context['classification'].upper()} response protocol · {len(self.response_centres)} centres in dataset"})
+        asyncio.create_task(agent4.run(advisory, incident_context))
+
+        try:
+            plan = await asyncio.wait_for(self._agent4_future, timeout=120.0)
+        except asyncio.TimeoutError:
+            logger.error("agent4_timeout")
+            return {"relief_plan": {}}
+        finally:
+            self._agent4_future = None
+
+        await self._emit("agent_stream", {"agent_id": "orchestrator", "event": "pipeline_complete", "content": "LangGraph: relief → END · full mission pipeline complete"})
+        tracer.end_trace(state["incident_id"])
+        return {"relief_plan": plan if isinstance(plan, dict) else dict(plan)}
 
     # ── EventBus integration ──────────────────────────────────────────────────
 
@@ -431,6 +527,7 @@ class ARIAOrchestrator:
                     "agent2_findings": None,
                     "relief_plan": None,
                     "advisory": None,
+                    "relief_plan": None,
                     "error": None,
                 },
                 config={"configurable": {"thread_id": incident_id}},
@@ -494,6 +591,20 @@ class ARIAOrchestrator:
             await self._emit("agent_stream", {"agent_id": "agent-3", "event": "started", "content": "Generating advisory"})
             advisory = await agent3.on_trigger(briefing)
             await self._emit("advisory", advisory)
+
+            self.state = "RELIEF_ACTIVE"
+            incident_context = {
+                "incident_id": incident_id,
+                "classification": classification,
+                "area": (self.agent1_report or {}).get("area", {}),
+            }
+            agent4 = ReliefAgent(
+                agent_id="agent-4", model=self.model_a4,
+                orchestrator=self, response_centres=self.response_centres,
+                stream_callback=self.event_callback,
+            )
+            await self._emit("agent_stream", {"agent_id": "agent-4", "event": "started", "content": "Coordinating ground relief"})
+            await agent4.run(advisory, incident_context)
 
         except Exception as e:
             logger.error("incident_stack_error", error=str(e), exc_info=True)

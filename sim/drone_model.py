@@ -4,92 +4,44 @@ Uses great-circle (haversine) math for position updates.
 State machine: IDLE -> FLYING -> LOITERING -> RTL -> IDLE
 """
 
+<<<<<<< HEAD
 import math
 import structlog
 from typing import Optional, Tuple
+=======
+from typing import Optional
+>>>>>>> 24c6382f974245ec571eddb1af70efedb54b5a47
 
 from sim.drone_interface import DroneInterface, Telemetry
+from sim.math_utils import haversine_distance as _haversine_distance
+from sim.math_utils import bearing as _bearing
+from sim.math_utils import destination_point as _destination_point
 
 logger = structlog.get_logger()
 
 
 FIXED_WING_DEFAULTS = {
-    "cruise_speed": 30.0,   # m/s — fast recon
+    "cruise_speed": 60.0,   # m/s — fast recon
     "cruise_alt": 120.0,    # m AGL
     "loiter_radius": 80.0,  # m
     "turn_radius": 45.0,    # m
 }
 
 ROTARY_DEFAULTS = {
-    "cruise_speed": 18.0,   # m/s — fast transit for demo
+    "cruise_speed": 26.0,   # m/s — fast transit for demo
     "hover_alt": 30.0,
     "loiter_time": 30.0,
 }
 
 MICRO_ROTARY_DEFAULTS = {
-    "cruise_speed": 10.0,   # m/s
+    "cruise_speed": 20.0,   # m/s
     "hover_alt": 10.0,
     "loiter_time": 60.0,
 }
 
-# Earth radius in meters
-EARTH_RADIUS_M = 6_371_000.0
 
 # Arrival threshold in meters
 ARRIVAL_THRESHOLD_M = 5.0
-
-
-def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Return great-circle distance in meters between two lat/lon points."""
-    lat1_r, lon1_r = math.radians(lat1), math.radians(lon1)
-    lat2_r, lon2_r = math.radians(lat2), math.radians(lon2)
-
-    dlat = lat2_r - lat1_r
-    dlon = lon2_r - lon1_r
-
-    a = (
-        math.sin(dlat / 2) ** 2
-        + math.cos(lat1_r) * math.cos(lat2_r) * math.sin(dlon / 2) ** 2
-    )
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return EARTH_RADIUS_M * c
-
-
-def _bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Return initial bearing in degrees (0-360) from point 1 to point 2."""
-    lat1_r, lon1_r = math.radians(lat1), math.radians(lon1)
-    lat2_r, lon2_r = math.radians(lat2), math.radians(lon2)
-
-    dlon = lon2_r - lon1_r
-    x = math.sin(dlon) * math.cos(lat2_r)
-    y = (
-        math.cos(lat1_r) * math.sin(lat2_r)
-        - math.sin(lat1_r) * math.cos(lat2_r) * math.cos(dlon)
-    )
-    bearing_rad = math.atan2(x, y)
-    return (math.degrees(bearing_rad) + 360) % 360
-
-
-def _destination_point(
-    lat: float, lon: float, bearing_deg: float, distance_m: float
-) -> Tuple[float, float]:
-    """Return (lat, lon) after moving distance_m along bearing from start point."""
-    lat_r = math.radians(lat)
-    lon_r = math.radians(lon)
-    bearing_r = math.radians(bearing_deg)
-
-    angular_dist = distance_m / EARTH_RADIUS_M
-
-    new_lat_r = math.asin(
-        math.sin(lat_r) * math.cos(angular_dist)
-        + math.cos(lat_r) * math.sin(angular_dist) * math.cos(bearing_r)
-    )
-    new_lon_r = lon_r + math.atan2(
-        math.sin(bearing_r) * math.sin(angular_dist) * math.cos(lat_r),
-        math.cos(angular_dist) - math.sin(lat_r) * math.sin(new_lat_r),
-    )
-
-    return math.degrees(new_lat_r), math.degrees(new_lon_r)
 
 
 class DroneModel(DroneInterface):
@@ -228,9 +180,18 @@ class DroneModel(DroneInterface):
             self.alt += alt_step
 
     def set_target(self, lat: float, lon: float, alt: float) -> None:
+<<<<<<< HEAD
         """Set a new target; transitions from IDLE or LOITERING to FLYING."""
         dist = _haversine_distance(self.lat, self.lon, lat, lon) if self.target_lat else 0
         logger.info("drone_target_set", drone_id=self.drone_id, lat=round(lat, 5), lon=round(lon, 5), alt=alt, dist_m=round(dist, 1))
+=======
+        """Set a new target; transitions from IDLE or LOITERING to FLYING.
+
+        Does NOT interrupt RTL — a drone in RTL must complete its return before
+        it accepts a new target. This is intentional: RTL is a safety-priority
+        state and agents should not override it.
+        """
+>>>>>>> 24c6382f974245ec571eddb1af70efedb54b5a47
         self.target_lat = lat
         self.target_lon = lon
         self.target_alt = alt

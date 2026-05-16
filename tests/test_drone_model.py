@@ -78,7 +78,7 @@ def test_position_updates_every_tick():
 
 
 def test_fixed_wing_1km_arrival_time():
-    """Fixed-wing at 18 m/s should cover 1km in ≈55 s (±2 s tolerance)."""
+    """Fixed-wing at 30 m/s should cover 1km in ≈33 s (±2 s tolerance)."""
     drone = make_fixed_wing()
     dist = _haversine_distance(0.0, 0.0, TARGET_1KM_LAT, TARGET_1KM_LON)
     expected_s = dist / FIXED_WING_DEFAULTS["cruise_speed"]
@@ -125,19 +125,19 @@ def test_micro_rotary_cruise_speed():
 
 
 def test_fixed_wing_defaults_values():
-    assert FIXED_WING_DEFAULTS["cruise_speed"] == 18.0
+    assert FIXED_WING_DEFAULTS["cruise_speed"] == 30.0
     assert FIXED_WING_DEFAULTS["cruise_alt"] == 120.0
     assert FIXED_WING_DEFAULTS["loiter_radius"] == 80.0
 
 
 def test_rotary_defaults_values():
-    assert ROTARY_DEFAULTS["cruise_speed"] == 8.0
+    assert ROTARY_DEFAULTS["cruise_speed"] == 18.0
     assert ROTARY_DEFAULTS["hover_alt"] == 30.0
     assert ROTARY_DEFAULTS["loiter_time"] == 30.0
 
 
 def test_micro_rotary_defaults_values():
-    assert MICRO_ROTARY_DEFAULTS["cruise_speed"] == 4.0
+    assert MICRO_ROTARY_DEFAULTS["cruise_speed"] == 10.0
     assert MICRO_ROTARY_DEFAULTS["hover_alt"] == 10.0
     assert MICRO_ROTARY_DEFAULTS["loiter_time"] == 60.0
 

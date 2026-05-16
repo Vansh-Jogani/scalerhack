@@ -1,139 +1,57 @@
-"""Agent 4 — Relief Coordinator.
+"""Agent 4 — Relief Helper Agent.
 
-Spawns disaster-type-specific relief drones at the response centre,
-calls Claude to produce a structured relief plan with waypoints,
-then commands each drone to its assigned relief position.
+Pre-fetches nearest response centres for the incident's disaster type,
+then calls the LLM once (tool_choice=issue_relief_plan) to produce a
+structured ground-level relief dispatch plan.
 """
 
-import asyncio
 import structlog
 from anthropic import AsyncAnthropic
 
-from agents.tools.flight_tools import create_fly_to_handler
+from agents.tools.relief_tools import (
+    FIND_NEAREST_CENTRE_TOOL,
+    ISSUE_RELIEF_PLAN_TOOL,
+    create_find_nearest_centre_handler,
+    create_issue_relief_plan_handler,
+)
 from prompts.registry import load_prompt
 
 logger = structlog.get_logger()
 
-RELIEF_CONFIGS = {
-    "fire": {
-        "relief_type": "fire_suppression",
-        "drones": 2,
-        "drone_type": "rotary",
-        "altitude": 40,
-    },
-    "structural_collapse": {
-        "relief_type": "passage_discovery",
-        "drones": 2,
-        "drone_type": "micro_rotary",
-        "altitude": 10,
-    },
-    "flood": {
-        "relief_type": "drainage_survey",
-        "drones": 1,
-        "drone_type": "fixed_wing",
-        "altitude": 80,
-    },
-    "industrial_hazard": {
-        "relief_type": "hazard_containment",
-        "drones": 2,
-        "drone_type": "rotary",
-        "altitude": 80,
-    },
-    "maritime_sar": {
-        "relief_type": "rescue_coordination",
-        "drones": 2,
-        "drone_type": "fixed_wing",
-        "altitude": 120,
-    },
-}
-
-COORDINATE_RELIEF_TOOL = {
-    "name": "coordinate_relief",
-    "description": "Issue post-assessment relief coordination plan with drone tasking.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "incident_id": {"type": "string"},
-            "relief_type": {"type": "string"},
-            "actions": {
-                "type": "array",
-                "maxItems": 4,
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "priority": {"type": "string", "enum": ["immediate", "high", "medium"]},
-                        "action": {"type": "string"},
-                        "details": {"type": "string"},
-                    },
-                    "required": ["priority", "action", "details"],
-                },
-            },
-            "drone_waypoints": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "role": {"type": "string"},
-                        "lat": {"type": "number"},
-                        "lon": {"type": "number"},
-                    },
-                    "required": ["role", "lat", "lon"],
-                },
-            },
-            "alerts": {
-                "type": "array",
-                "items": {"type": "string"},
-            },
-            "resource_requests": {
-                "type": "array",
-                "items": {"type": "string"},
-            },
-            "status": {"type": "string"},
-        },
-        "required": [
-            "incident_id", "relief_type", "actions",
-            "drone_waypoints", "alerts", "resource_requests", "status",
-        ],
-    },
+# Response centre types to query per disaster classification
+CENTRE_PRIORITY_MAP: dict[str, list[str]] = {
+    "fire":                ["FIRE_STATION", "HOSPITAL", "NDRF"],
+    "structural_collapse": ["NDRF", "CIVIL_DEFENCE", "HOSPITAL"],
+    "flood":               ["NDRF", "SDRF", "MUNICIPAL_EMERGENCY", "HOSPITAL"],
+    "industrial_hazard":   ["FIRE_STATION", "NDRF", "HOSPITAL"],
+    "maritime_sar":        ["AIRPORT_EMERGENCY", "NDRF", "HOSPITAL"],
 }
 
 
 class ReliefAgent:
-    """Agent 4: coordinates disaster-specific relief operations after swarm assessment."""
+    """Agent 4: locates nearest rescue units, issues structured relief plan."""
 
     def __init__(
         self,
         agent_id: str,
         model: str,
-        world_state,
-        sensor_overlay,
         orchestrator,
-        classification: str,
-        incident_id: str = "",
+        response_centres: list,
         stream_callback=None,
-        staging_lat: float | None = None,
-        staging_lon: float | None = None,
-        severity: str = "medium",
     ):
         self.agent_id = agent_id
         self.model = model
-        self.world_state = world_state
-        self.sensor_overlay = sensor_overlay
         self.orchestrator = orchestrator
-        self.classification = classification
-        self.incident_id = incident_id
         self.stream_callback = stream_callback
-        self.staging_lat = staging_lat
-        self.staging_lon = staging_lon
-        self.severity = severity
         self.client = AsyncAnthropic()
 
-        self.config = RELIEF_CONFIGS.get(classification, RELIEF_CONFIGS["fire"])
-        self.drone_ids: list[str] = []
-
         prompt_data = load_prompt("agent4_relief")
-        self.system_prompt = prompt_data["text"]
-        self._fly_to = create_fly_to_handler(world_state)
+        self._system_prompt = prompt_data["text"]
+
+        self._tool_handlers = {
+            "find_nearest_centre": create_find_nearest_centre_handler(response_centres),
+            "issue_relief_plan":   create_issue_relief_plan_handler(orchestrator),
+        }
 
     async def _emit(self, event: str, content) -> None:
         if self.stream_callback:
@@ -142,172 +60,101 @@ class ReliefAgent:
                 {"agent_id": self.agent_id, "event": event, "content": content},
             )
 
-    async def run(self, agent2_report: dict) -> None:
-        area = agent2_report.get("area", {})
+    async def run(self, advisory: dict, incident_context: dict) -> None:
+        classification = incident_context.get("classification", "unknown")
+        area = incident_context.get("area", {})
         center = area.get("center", {})
-        center_lat = center.get("lat", 17.3950)
-        center_lon = center.get("lon", 78.4967)
+        incident_lat = center.get("lat", 17.3880)
+        incident_lon = center.get("lon", 78.4895)
+        incident_id = incident_context.get("incident_id", "")
 
-        staging_lat = self.staging_lat if self.staging_lat is not None else center_lat
-        staging_lon = self.staging_lon if self.staging_lon is not None else center_lon
+        relevant_types = CENTRE_PRIORITY_MAP.get(classification, ["NDRF", "HOSPITAL", "FIRE_STATION"])
 
-        num_drones = self.config["drones"]
-        drone_type = self.config["drone_type"]
-        alt = float(self.config["altitude"])
+        await self._emit(
+            "relief_started",
+            f"Locating rescue units for {classification.upper()} — querying {len(relevant_types)} unit types",
+        )
 
-        for i in range(num_drones):
-            drone_id = f"relief-{self.agent_id}-{i}"
-            offset_lon = staging_lon + (i - num_drones // 2) * 0.0006
-            self.world_state.add_drone(drone_id, drone_type, staging_lat, offset_lon)
-            self.drone_ids.append(drone_id)
+        # Pre-fetch nearest centres for each relevant type
+        nearest_centres: dict[str, list] = {}
+        for ctype in relevant_types:
+            result = await self._tool_handlers["find_nearest_centre"](
+                centre_type=ctype,
+                incident_lat=incident_lat,
+                incident_lon=incident_lon,
+                limit=3,
+            )
+            if result.get("status") == "ok" and result["centres"]:
+                nearest_centres[ctype] = result["centres"]
+                names = ", ".join(c["name"] for c in result["centres"][:2])
+                dists = ", ".join(f"{c['distance_m']}m" for c in result["centres"][:2])
+                await self._emit("centre_found", f"{ctype} — {names} ({dists})")
+            else:
+                await self._emit("centre_missing", f"No {ctype} units found — will flag as resource gap")
 
-        await self._emit("relief_started", {
-            "relief_type": self.config["relief_type"],
-            "drones": self.drone_ids,
-            "classification": self.classification,
-        })
-
-        context = {
-            "incident_id": self.incident_id,
-            "classification": self.classification,
-            "center": {"lat": center_lat, "lon": center_lon},
-            "zones_assessed": agent2_report.get("zones_assessed", [])[:6],
-            "survivor_detections": agent2_report.get("survivor_detections", [])[:4],
-            "hazard_map": agent2_report.get("hazard_map", [])[:4],
-            "relief_drones_available": num_drones,
-            "relief_type": self.config["relief_type"],
-            "altitude_m": alt,
+        observations = {
+            "incident_id": incident_id,
+            "classification": classification,
+            "incident_location": {"lat": incident_lat, "lon": incident_lon},
+            "advisory_summary": advisory.get("situation_summary", ""),
+            "immediate_actions": advisory.get("immediate_actions", []),
+            "exclusion_zones": advisory.get("exclusion_zones", []),
+            "risk_flags": advisory.get("risk_flags", []),
+            "available_response_centres": nearest_centres,
         }
 
-        messages = [{"role": "user", "content": (
-            f"Swarm assessment complete for {self.classification} incident. "
-            f"Coordinate relief operations and assign {num_drones} drone(s) to positions:\n{context}"
-        )}]
+        total_units = sum(len(v) for v in nearest_centres.values())
+        await self._emit(
+            "llm_call",
+            f"Calling {self.model} · tool_choice=issue_relief_plan · {total_units} candidate units across {len(nearest_centres)} types",
+        )
 
         try:
             response = await self.client.messages.create(
                 model=self.model,
-                max_tokens=1024,
-                system=self.system_prompt,
-                messages=messages,
-                tools=[COORDINATE_RELIEF_TOOL],
-                tool_choice={"type": "tool", "name": "coordinate_relief"},
+                max_tokens=2048,
+                system=self._system_prompt,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"Coordinate immediate relief response:\n{observations}",
+                    }
+                ],
+                tools=[FIND_NEAREST_CENTRE_TOOL, ISSUE_RELIEF_PLAN_TOOL],
+                tool_choice={"type": "tool", "name": "issue_relief_plan"},
             )
+
+            for block in response.content:
+                if block.type == "tool_use" and block.name == "issue_relief_plan":
+                    result = await self._tool_handlers["issue_relief_plan"](**block.input)
+                    units = len(block.input.get("dispatched_units", []))
+                    triage = len(block.input.get("triage_sites", []))
+                    note = block.input.get("coordination_note", "")
+                    await self._emit(
+                        "relief_issued",
+                        f"Relief plan filed — {units} units dispatched · {triage} triage sites · {note[:100]}",
+                    )
+                    logger.info("agent4_relief_issued", incident_id=incident_id, units=units)
+                    return
+
         except Exception as e:
-            logger.error("agent4_llm_error", error=str(e))
-            await self._fallback_plan(center_lat, center_lon, alt)
-            return
+            logger.error("agent4_error", error=str(e))
+            await self._emit("error", {"message": str(e)})
+            # Resolve future with a fallback plan so the pipeline doesn't hang
+            self.orchestrator.receive_agent4_plan(
+                self._fallback_plan(incident_id, nearest_centres)
+            )
 
-        relief_plan: dict = {}
-        for block in response.content:
-            if block.type == "tool_use" and block.name == "coordinate_relief":
-                relief_plan = dict(block.input)
-                if not relief_plan.get("incident_id"):
-                    relief_plan["incident_id"] = self.incident_id
-                break
-
-        if not relief_plan:
-            await self._fallback_plan(center_lat, center_lon, alt)
-            return
-
-        waypoints = relief_plan.get("drone_waypoints", [])
-        for i, drone_id in enumerate(self.drone_ids):
-            if i < len(waypoints):
-                wp = waypoints[i]
-                await self._fly_to(drone_id=drone_id, lat=wp["lat"], lon=wp["lon"], alt=alt)
-                await self._emit("drone_tasked", {
-                    "drone_id": drone_id,
-                    "role": wp.get("role", self.config["relief_type"]),
-                    "lat": round(wp["lat"], 5),
-                    "lon": round(wp["lon"], 5),
-                })
-            else:
-                await self._fly_to(drone_id=drone_id, lat=center_lat, lon=center_lon, alt=alt)
-
-        for alert in relief_plan.get("alerts", []):
-            await self._emit("alert_broadcast", alert)
-
-        await self._emit("findings_reported", relief_plan)
-        self.orchestrator.receive_agent4_report(relief_plan)
-
-        asyncio.create_task(self._suppression_sequence(waypoints))
-        logger.info("agent4_relief_complete", incident_id=self.incident_id, relief_type=self.config["relief_type"])
-
-    async def _wait_for_arrivals(self, timeout: float = 45.0) -> None:
-        loop = asyncio.get_running_loop()
-        deadline = loop.time() + timeout
-        while loop.time() < deadline:
-            states = [
-                (self.world_state.drones[did].get_state() if did in self.world_state.drones else "IDLE")
-                for did in self.drone_ids
-            ]
-            if all(s in ("LOITERING", "IDLE", "RTL") for s in states):
-                return
-            await asyncio.sleep(0.5)
-
-    async def _suppression_sequence(self, waypoints: list) -> None:
-        try:
-            await self._wait_for_arrivals(timeout=45.0)
-            await asyncio.sleep(8)  # scope / position the area before engaging
-
-            is_fire = self.classification == "fire"
-            if is_fire:
-                drop_rounds = {"low": 4, "medium": 5, "high": 6}.get(self.severity, 5)
-                await self._emit("suppression_active", {
-                    "incident_id": self.incident_id,
-                    "drone_ids": self.drone_ids,
-                    "severity": self.severity,
-                })
-                for _ in range(drop_rounds):
-                    await asyncio.sleep(4)
-                    for drone_id in self.drone_ids:
-                        drone_obj = self.world_state.drones.get(drone_id)
-                        spray_lat = drone_obj.lat if drone_obj else None
-                        spray_lon = drone_obj.lon if drone_obj else None
-                        if spray_lat is None and waypoints:
-                            spray_lat = waypoints[0]["lat"]
-                            spray_lon = waypoints[0]["lon"]
-                        if spray_lat is None:
-                            continue
-                        await self._emit("suppression_drop", {
-                            "drone_id": drone_id,
-                            "lat": spray_lat,
-                            "lon": spray_lon,
-                            "incident_id": self.incident_id,
-                        })
-                await asyncio.sleep(12)  # post-suppression loiter / assessment
-                await self._emit("suppression_complete", {
-                    "incident_id": self.incident_id,
-                    "severity": self.severity,
-                })
-            else:
-                loiter_secs = {"structural_collapse": 30, "flood": 20, "industrial_hazard": 25, "maritime_sar": 20}
-                await asyncio.sleep(loiter_secs.get(self.classification, 20))
-
-            for drone_id in self.drone_ids:
-                drone = self.world_state.drones.get(drone_id)
-                if drone and drone.get_state() not in ("IDLE", "RTL"):
-                    drone.return_to_launch()
-        except Exception as e:
-            logger.error("agent4_suppression_error", error=str(e), incident_id=self.incident_id)
-            for drone_id in self.drone_ids:
-                drone = self.world_state.drones.get(drone_id)
-                if drone and drone.get_state() not in ("IDLE", "RTL"):
-                    drone.return_to_launch()
-
-    async def _fallback_plan(self, center_lat: float, center_lon: float, alt: float) -> None:
-        """Fallback when LLM fails — command drones to centroid and report minimal plan."""
-        for drone_id in self.drone_ids:
-            await self._fly_to(drone_id=drone_id, lat=center_lat, lon=center_lon, alt=alt)
-        plan = {
-            "incident_id": self.incident_id,
-            "relief_type": self.config["relief_type"],
-            "actions": [{"priority": "immediate", "action": "Deploy to centroid", "details": "LLM fallback — drones assigned to incident centre"}],
-            "drone_waypoints": [{"role": "relief", "lat": center_lat, "lon": center_lon}],
-            "alerts": [],
-            "resource_requests": [],
-            "status": "deployed_fallback",
+    def _fallback_plan(self, incident_id: str, nearest_centres: dict) -> dict:
+        dispatched = []
+        for ctype, centres in nearest_centres.items():
+            for c in centres[:1]:
+                dispatched.append({**c, "role": f"Immediate {ctype.replace('_', ' ').lower()} response"})
+        return {
+            "incident_id": incident_id,
+            "dispatched_units": dispatched,
+            "triage_sites": [],
+            "evacuation_routes": [{"description": "Move upwind from incident", "direction": "north", "notes": "Pending full assessment"}],
+            "resource_gaps": [],
+            "coordination_note": "Fallback plan — LLM unavailable. Nearest units pre-dispatched.",
         }
-        await self._emit("findings_reported", plan)
-        self.orchestrator.receive_agent4_report(plan)
-        asyncio.create_task(self._suppression_sequence([{"lat": center_lat, "lon": center_lon}]))

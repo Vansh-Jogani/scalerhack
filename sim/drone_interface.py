@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -12,7 +12,11 @@ class Telemetry:
     speed: float
     state: str
     battery_pct: float
+<<<<<<< HEAD
     drone_type: str = "fixed_wing"
+=======
+    drone_type: str = field(default="unknown")
+>>>>>>> 24c6382f974245ec571eddb1af70efedb54b5a47
 
 
 class DroneInterface(ABC):

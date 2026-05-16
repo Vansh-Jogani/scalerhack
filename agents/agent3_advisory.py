@@ -1,7 +1,7 @@
 """Agent 3 — Advisory Agent (Claude API, tool-use enforced).
 
 Event-driven, not a loop. Receives IncidentBriefing, issues structured advisory
-via the issue_advisory tool. No Ollama dependency.
+via the issue_advisory tool. Includes retry logic with fallback to cached advisory.
 """
 
 from datetime import datetime, timezone
@@ -9,6 +9,7 @@ import structlog
 from anthropic import AsyncAnthropic
 
 from agents.tools.report_tools import ISSUE_ADVISORY_TOOL
+from agents.resilience import retry_api_call
 from prompts.registry import load_prompt
 
 logger = structlog.get_logger()
@@ -41,8 +42,8 @@ class AdvisoryAgent:
             }
         ]
 
-        try:
-            response = await self.client.messages.create(
+        async def _call_api():
+            return await self.client.messages.create(
                 model=self.model,
                 max_tokens=1024,
                 system=self._system_prompt,
@@ -50,6 +51,9 @@ class AdvisoryAgent:
                 tools=[ISSUE_ADVISORY_TOOL],
                 tool_choice={"type": "tool", "name": "issue_advisory"},
             )
+
+        try:
+            response = await retry_api_call(_call_api, max_retries=3, context="agent3_advisory")
 
             for block in response.content:
                 if block.type == "tool_use" and block.name == "issue_advisory":
@@ -74,6 +78,12 @@ class AdvisoryAgent:
 
         except Exception as e:
             logger.error("agent3_error", error=str(e))
+
+        if self.latest_advisory:
+            logger.info("agent3_using_cached_advisory")
+            cached = dict(self.latest_advisory)
+            cached["monitoring_status"] = "[CACHED — API unavailable] " + cached.get("monitoring_status", "")
+            return cached
 
         return self._fallback_advisory(briefing_dict)
 

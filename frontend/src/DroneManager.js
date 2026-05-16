@@ -122,6 +122,29 @@ function makeSwarmEl(color = '#ff5a4d', size = 22) {
   return w
 }
 
+// MicroDrone — Agent 2 micro_rotary (hexacopter, tight search pattern)
+function makeMicroEl(color = '#ff5a4d', size = 16) {
+  const w = document.createElement('div')
+  w.style.cssText = `position:relative;width:${size}px;height:${size}px;pointer-events:none`
+  const rot = document.createElement('div')
+  rot.className = 'swarm-rot'
+  rot.style.cssText = `position:absolute;inset:0;transform-origin:center`
+  // 6 rotor dots at 60° intervals (hexacopter)
+  const rotors = [0, 60, 120, 180, 240, 300].map(deg => {
+    const r = 6, rad = deg * Math.PI / 180
+    return `<circle cx="${(Math.cos(rad) * r).toFixed(2)}" cy="${(Math.sin(rad) * r).toFixed(2)}" r="1.2" fill="${color}" opacity="0.7"/>`
+  }).join('')
+  rot.innerHTML = `<svg viewBox="-10 -10 20 20" style="position:absolute;inset:0;overflow:visible">
+    ${rotors}
+    <circle cx="0" cy="0" r="2.5" fill="none" stroke="${color}" stroke-width="0.7" opacity="0.4"/>
+  </svg>`
+  w.appendChild(rot)
+  const dot = document.createElement('span')
+  dot.style.cssText = `position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:3px;height:3px;background:${color};border-radius:50%;box-shadow:0 0 4px ${color};animation:swarmBreathe 1.8s ease-in-out infinite`
+  w.appendChild(dot)
+  return w
+}
+
 class _DroneManager {
   constructor() {
     this._map = null
@@ -154,15 +177,23 @@ class _DroneManager {
 
   updateDrone(data) {
     if (!this._map) return
-    const { drone_id, lat, lon, heading, state, battery_pct, alt, speed, swarm_leader } = data
+    const { drone_id, lat, lon, heading, state, battery_pct, alt, speed, swarm_leader, drone_type } = data
     const color = '#00FF88'
 
     if (!this._drones[drone_id]) {
-      // drone-001 is Agent 1 (BeaconDrone), swarm-* are Agent 2 (SwarmDrone)
-      const isBeacon = drone_id === 'drone-001'
-      const el = isBeacon
-        ? makeBeaconEl('#9C8AFF', 56)   // large, distinctive surveillance drone
-        : makeSwarmEl(color, 24)
+      // Icon selection by drone_type — falls back to ID check for backward compat
+      const type = drone_type || (drone_id === 'drone-001' ? 'fixed_wing' : 'rotary')
+      let el
+      if (type === 'fixed_wing') {
+        // Agent 1 surveillance: large beacon; swarm fixed-wings: smaller
+        el = drone_id === 'drone-001'
+          ? makeBeaconEl('#9C8AFF', 56)
+          : makeBeaconEl(color, 32)
+      } else if (type === 'micro_rotary') {
+        el = makeMicroEl(color, 16)
+      } else {
+        el = makeSwarmEl(color, 24)
+      }
 
       const popup = new mapboxgl.Popup({ className: 'aria-popup', closeButton: false, offset: 14 })
       popup.on('open', () => {
@@ -170,7 +201,11 @@ class _DroneManager {
         if (!d) return
         popup.setHTML(`<div style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.8">
           <div><span style="color:#7A8FA8">ID   </span> ${drone_id}</div>
+<<<<<<< HEAD
           <div><span style="color:#7A8FA8">TYPE </span> <span style="color:${color}">${typeLabel}</span></div>
+=======
+          <div><span style="color:#7A8FA8">TYPE </span> ${d.drone_type || '?'}</div>
+>>>>>>> 24c6382f974245ec571eddb1af70efedb54b5a47
           <div><span style="color:#7A8FA8">STATE</span> ${d.state}</div>
           <div><span style="color:#7A8FA8">BAT  </span> ${d.battery_pct != null ? d.battery_pct.toFixed(0) + '%' : '?'}</div>
           <div><span style="color:#7A8FA8">ALT  </span> ${d.alt != null ? d.alt.toFixed(0) + 'm' : '?'}</div>
@@ -217,6 +252,7 @@ class _DroneManager {
         trailCoords: [],  // [[lon, lat], ...] — Mapbox order
         state: state || 'IDLE',
         swarm_leader: !!swarm_leader,
+        drone_type: type,
         battery_pct, alt, speed, color,
       }
     } else {

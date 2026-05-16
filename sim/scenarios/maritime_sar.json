@@ -1,25 +1,28 @@
 {
   "name": "maritime_sar_test",
+  "center": {"lat": 17.4150, "lon": 78.4750},
   "markers": [
     {
       "id": "marker-ms-001",
-      "lat": 33.720,
-      "lon": -118.280,
+      "lat": 17.4150,
+      "lon": 78.4750,
       "type": "maritime_sar",
+      "type_hint": "distress signal",
+      "ground_truth_type": "maritime_sar",
       "radius_m": 1000.0,
       "severity": "high",
       "confirmed": false
     }
   ],
   "home_position": {
-    "lat": 33.740,
-    "lon": -118.260,
+    "lat": 17.4080,
+    "lon": 78.4680,
     "alt": 0.0
   },
   "boundary_polygon": [
-    [33.711, -118.289],
-    [33.729, -118.289],
-    [33.729, -118.271],
-    [33.711, -118.271]
+    [17.4060, 78.4660],
+    [17.4240, 78.4660],
+    [17.4240, 78.4840],
+    [17.4060, 78.4840]
   ]
 }

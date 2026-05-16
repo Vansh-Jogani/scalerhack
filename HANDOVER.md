@@ -4,6 +4,19 @@
 > Add an entry after: stage completion, blocker hit, architectural decision, end of session.
 > Format below. Keep entries tight — full prose belongs in `CONTEXT.md`.
 
+2026-05-16 — Agent 4 (ReliefAgent) added — immediate ground rescue coordination
+**New files:** agents/agent4_relief.py, agents/tools/relief_tools.py, prompts/agent4_relief.md
+**Pipeline change:** LangGraph graph extended START→surveillance→swarm→advisory→**relief**→END (was →END after advisory)
+**What A4 does:** Pre-fetches nearest response centres (FIRE_STATION/NDRF/HOSPITAL/SDRF/etc.) for the incident's disaster type using haversine distance from response_centres.json (17 Hyderabad centres). Calls LLM once with tool_choice=issue_relief_plan to produce: dispatched_units (name, type, ETA), triage_sites, evacuation_routes, resource_gaps, coordination_note.
+**CENTRE_PRIORITY_MAP:** fire→[FIRE_STATION,HOSPITAL,NDRF] | structural_collapse→[NDRF,CIVIL_DEFENCE,HOSPITAL] | flood→[NDRF,SDRF,MUNICIPAL_EMERGENCY,HOSPITAL] | industrial_hazard→[FIRE_STATION,NDRF,HOSPITAL] | maritime_sar→[AIRPORT_EMERGENCY,NDRF,HOSPITAL]
+**Orchestrator changes:** ARIAState.relief_plan added; receive_agent4_plan(); _agent4_future; model_a4+response_centres constructor params; fallback pipeline also includes A4.
+**Backend changes:** main.py loads frontend/src/data/response_centres.json at startup and passes to orchestrator; config.yaml agent4 entry added.
+**Frontend changes:** App.jsx: A4 state tracking, reliefPlan state, relief_plan WS handler, agent-4 stream ID mapping. SidePanel.jsx: A4 row in AgentCard (orange, LOCATING/DISPATCHED states), Relief tab in StreamCard (dispatched units with ETA, triage sites, evac routes, resource gaps), ReliefPlanView component. LANGGRAPH label updated to 4 NODES. Reset clears reliefPlan via onMissionStart.
+**Verified:** npm run build → 0 errors, 40 modules.
+**Next:** End-to-end test with live Anthropic API key to verify A4 runs after A3 advisory.
+
+---
+
 2026-05-16 — Full system verified end-to-end + UI redesign
 **Fixed:** Anthropic API key had `ssk-` prefix typo → corrected to `sk-` in .env
 **UI redesign:** App.jsx now full-screen map with SidePanel.jsx as left-side semi-transparent glass overlay (rgba(8,12,20,0.82) + backdrop-filter:blur(16px)). CommandDashboard removed. SidePanel has: zone draw → type grid → severity → deploy → agent status dots (idle/active/done/error with pulse animation) → pipeline feed → advisory tab.
